@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "416073425879",
+    "project_id": "chat-app2-staj",
+    "storage_bucket": "chat-app2-staj.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:416073425879:android:0110b1a241907605d1e192",
+        "android_client_info": {
+          "package_name": "com.example.stajapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAmdKWYg_G-86xTHiOcFHs30TMAgBDjoPw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
