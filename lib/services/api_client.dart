@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class ApiClient {
-  static const String baseUrl = "http://192.168.60.44:3000";
+  static const String baseUrl = "http://192.168.60.38:3000";
 
   Future<http.Response> post({ //login register
     required String url,

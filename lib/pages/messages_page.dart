@@ -1,5 +1,4 @@
 import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'chats_page.dart';
 import 'discover_page.dart';
@@ -13,53 +12,351 @@ class MessagesPage extends StatefulWidget {
 }
 
 class _MessagesPageState extends State<MessagesPage> {
-  int _selectedIndex = 0;
+
+  int _selectedIndex = 0; 
+  final TextEditingController _searchController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
+  late PageController _pageController;
+
+  bool _showSmallTitle = false;
+  String _searchText = "";
+  double _currentPage = 0.0; // Dynamic page scroll position indicator
 
   final List<Map<String, dynamic>> users = [
     {
-      "name": "",
-      "message": "",
+      "name": "Ahmet Yılmaz",
+      "message": "Yarınki toplantı saat kaçtaydı?",
+      "time": "17:45",
+      "icon": Icons.person,
+      "unread": 7,
+    },
+    {
+      "name": "Zeynep Kaya",
+      "message": "Gönderdiğin dosyaları inceledim, harika görünüyor! 🚀",
+      "time": "16:20",
+      "icon": Icons.person,
+      "unread": 3,
+    },
+    {
+      "name": "Mehmet Demir",
+      "message": "Kahve içmeye ne dersin?",
+      "time": "14:15",
+      "icon": Icons.person,
+      "unread": 4,
+    },
+    {
+      "name": "Elif Şahin",
+      "message": "Projeyi bugün teslim etmemiz gerekiyor mu?",
+      "time": "12:05",
       "icon": Icons.person,
     },
     {
-      "name": "",
-      "message": "",
+      "name": "Caner Öztürk",
+      "message": "Tamamdır, haberleşiriz.",
+      "time": "Dün",
       "icon": Icons.person,
     },
     {
-      "name": "",
-      "message": "",
+      "name": "Selin Aydın",
+      "message": "Fotoğrafları gruba atabilir misin?",
+      "time": "Dün",
+      "icon": Icons.person,
+    },
+    {
+      "name": "Burak Çelik",
+      "message": "Arayabilir misin musait olduğunda?",
+      "time": "Pazartesi",
+      "icon": Icons.person,
+    },
+    {
+      "name": "Merve Yıldız",
+      "message": "Teşekkür ederim, çok yardımcı oldun!",
+      "time": "Pazartesi",
+      "icon": Icons.person,
+    },
+    {
+      "name": "Emre Kurtuluş",
+      "message": "Konumu attım, bekliyorum.",
+      "time": "12.05.2026",
+      "icon": Icons.person,
+    },
+    {
+      "name": "Deniz Arslan",
+      "message": "İyi haftasonları! 🎉",
+      "time": "10.05.2026",
+      "icon": Icons.person,
+    },
+    {
+      "name": "Gözde Doğan",
+      "message": "Son güncellemeleri koda pushladım.",
+      "time": "08.05.2026",
+      "icon": Icons.person,
+    },
+    {
+      "name": "Kaan Özkan",
+      "message": "Ses kaydı gönderdi (0:24)",
+      "time": "01.05.2026",
       "icon": Icons.person,
     },
   ];
 
   @override
+  void initState() {
+    super.initState();
+    _pageController = PageController(initialPage: _selectedIndex); //ilk sohbet sayfası aciliyor
+    _scrollController.addListener(() {
+      final show = _scrollController.offset > 55;
+      if (show != _showSmallTitle) { //kücük sohbetler basligi
+        setState(() {
+          _showSmallTitle = show;
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    _searchController.dispose();
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          _selectedIndex == 0
-              ? "Mesajlar"
-              : _selectedIndex == 1
-                  ? "Keşfet"
-                  : "Profil",
-        ),
-      ),
-
+      backgroundColor: const Color(0xFFF4F6F9),
+      extendBody: true,
       body: Stack(
         children: [
-          Padding(
-            padding: const EdgeInsets.only(bottom: 105),
-            child: _page(),
+          // İçerik Katmanı 
+          NotificationListener<ScrollNotification>(
+            onNotification: (notification) {
+              if (_pageController.hasClients &&
+                  _pageController.position.haveDimensions) {
+                setState(() {
+                  _currentPage =
+                      _pageController.page ?? _selectedIndex.toDouble();
+                });
+              }
+              return false;
+            },
+            child: PageView( // sayfayı sağa sola kaydırır
+              controller: _pageController,
+              onPageChanged: (index) {
+                setState(() => _selectedIndex = index);
+              },
+              children: [_page(), const DiscoverPage(), const ProfilePage()],
+            ),
           ),
 
+          // 2. Üst Cam AppBar
+          if (_selectedIndex == 0)
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: AnimatedOpacity(
+                duration: const Duration(milliseconds: 20),
+                opacity: _showSmallTitle ? 1.0 : 0.0,
+                child: ClipRect(
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+                    child: Container(
+                      height: MediaQuery.of(context).padding.top + 52,
+                      padding: EdgeInsets.only(
+                        top: MediaQuery.of(context).padding.top,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withAlpha(190),
+                        border: Border(
+                          bottom: BorderSide(
+                            color: const Color(0xFF08314D).withAlpha(15),
+                            width: 0.8,
+                          ),
+                        ),
+                      ),
+                      alignment: Alignment.center,
+                      child: const Text(
+                        "Sohbetler",
+                        style: TextStyle(
+                          color: Color.fromARGB(255, 6, 44, 65),
+                          fontSize: 17,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: -0.3,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+
+          // sürüklenen bar
           Positioned(
-            left: 14,
-            right: 14,
-            bottom: MediaQuery.of(context).viewPadding.bottom + 8,
-            child: _glassNavigation(),
+            left: 20,
+            right: 20,
+            bottom: MediaQuery.of(context).padding.bottom + 12,
+            child: _buildCustomGlassNavBar(),
           ),
         ],
+      ),
+    );
+  }
+
+  // Sürüklenebilir Kapsüllü Glass Navigation Bar (Tüm Renk ve Ayarları Birebir Korundu)
+  Widget _buildCustomGlassNavBar() {
+    final navItems = [
+      {'icon': Icons.chat_bubble_outline_rounded, 'label': 'Sohbetler'},
+      {'icon': Icons.explore_outlined, 'label': 'Keşfet'},
+      {'icon': Icons.person_outline_rounded, 'label': 'Profil'},
+    ];
+
+    return Container(
+      height: 70,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(40),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(20),
+            blurRadius: 30,
+            spreadRadius: 2,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(40),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 4, sigmaY: 4),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+            decoration: BoxDecoration(
+              color: Colors.white.withAlpha(15),
+              borderRadius: BorderRadius.circular(40),
+              border: Border.all(
+                color: Colors.white.withAlpha(180),
+                width: 1.5,
+              ),
+            ),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final totalWidth = constraints.maxWidth;
+                final itemWidth = totalWidth / navItems.length;
+
+                return GestureDetector(
+                  onHorizontalDragUpdate: (details) {
+                    double targetPage = (details.localPosition.dx / itemWidth)
+                        .clamp(0.0, (navItems.length - 1).toDouble());
+                    setState(() {
+                      _currentPage = targetPage;
+                    });
+                    if (_pageController.hasClients) {
+                      _pageController.jumpTo(
+                        targetPage * _pageController.position.viewportDimension,
+                      );
+                    }
+                  },
+                  onHorizontalDragEnd: (details) {
+                    int targetIndex = _currentPage.round().clamp(
+                      0,
+                      navItems.length - 1,
+                    );
+                    setState(() {
+                      _selectedIndex = targetIndex;
+                      _currentPage = targetIndex.toDouble();
+                    });
+                    _pageController.animateToPage(
+                      targetIndex,
+                      duration: const Duration(milliseconds: 250),
+                      curve: Curves.easeOutCubic,
+                    );
+                  },
+                  child: Stack(
+                    children: [
+                      // Sürüklenebilir Mavi Kapsül (Pill)
+                      Positioned(
+                        left: (_currentPage * itemWidth).clamp(
+                          0.0,
+                          totalWidth - itemWidth,
+                        ),
+                        width: itemWidth,
+                        top: 0,
+                        bottom: 0,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: const Color.fromARGB(
+                              255,
+                              4,
+                              38,
+                              73,
+                            ).withAlpha(215),
+                            borderRadius: BorderRadius.circular(32),
+                          ),
+                        ),
+                      ),
+
+                      // İkonlar ve Metinler
+                      Row(
+                        children: List.generate(navItems.length, (index) {
+                          double distance = (_currentPage - index).abs();
+                          double selectionRatio = (1.0 - distance).clamp(
+                            0.0,
+                            1.0,
+                          );
+
+                          Color dynamicColor = Color.lerp(
+                            const Color(0xFF4A5568),
+                            Colors.white,
+                            selectionRatio,
+                          )!;
+
+                          return Expanded(
+                            child: GestureDetector(
+                              behavior: HitTestBehavior.opaque,
+                              onTap: () {
+                                setState(() {
+                                  _selectedIndex = index;
+                                  _currentPage = index.toDouble();
+                                });
+                                _pageController.animateToPage(
+                                  index,
+                                  duration: const Duration(milliseconds: 250),
+                                  curve: Curves.easeOutCubic,
+                                );
+                              },
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    navItems[index]['icon'] as IconData,
+                                    color: dynamicColor,
+                                    size: 24,
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    navItems[index]['label'] as String,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: selectionRatio > 0.5
+                                          ? FontWeight.w600
+                                          : FontWeight.w500,
+                                      color: dynamicColor,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        }),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -67,307 +364,358 @@ class _MessagesPageState extends State<MessagesPage> {
   Widget _page() {
     switch (_selectedIndex) {
       case 0:
-        return ListView.separated(
-          itemCount: users.length,
-          separatorBuilder: (_, __) => const Divider(height: 1),
-          itemBuilder: (context, index) {
-            final user = users[index];
+        final filteredUsers = users.where((user) {
+          return user["name"].toString().toLowerCase().contains(
+            _searchText.toLowerCase(),
+          );
+        }).toList();
 
-            return ListTile(
-              leading: CircleAvatar(
-                child: Icon(user["icon"]),
-              ),
-              title: Text(user["name"]),
-              subtitle: Text(user["message"]),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) =>
-                        ChatsPage(userName: user["name"]),
+        final totalUnread = users.fold<int>(
+          0,
+          (sum, item) => sum + ((item["unread"] as int?) ?? 0),
+        );
+
+        return ListView(
+          controller: _scrollController,
+          physics: const BouncingScrollPhysics(),
+          padding: EdgeInsets.only(
+            top: MediaQuery.of(context).padding.top + 16,
+            bottom: 120,
+          ),
+          children: [
+            // Üst Başlık & Okunmayan Mesaj Rozeti
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Row(
+                children: [
+                  const Text(
+                    "Sohbetler",
+                    style: TextStyle(
+                      fontSize: 30,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFF041B2A),
+                      letterSpacing: -0.6,
+                    ),
                   ),
-                );
-              },
-            );
-          },
+                  const SizedBox(width: 10),
+                  if (totalUnread > 0)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF08314D).withAlpha(18),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        "$totalUnread yeni",
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF08314D),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 16),
+
+            // Arama Kutusu
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 18),
+              child: Container(
+                height: 46,
+                decoration: BoxDecoration(
+                  color: Colors.white.withAlpha(210),
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(color: Colors.white, width: 1.2),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF08314D).withAlpha(8),
+                      blurRadius: 16,
+                      spreadRadius: 0,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                alignment: Alignment.center,
+                child: TextField(
+                  controller: _searchController,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w500,
+                    color: Color(0xFF1F2937),
+                  ),
+                  decoration: InputDecoration(
+                    border: InputBorder.none,
+                    enabledBorder: InputBorder.none,
+                    focusedBorder: InputBorder.none,
+                    filled: true,
+                    fillColor: Colors.transparent,
+                    isDense: true,
+                    contentPadding: const EdgeInsets.symmetric(vertical: 0),
+                    prefixIcon: const Padding(
+                      padding: EdgeInsets.only(left: 10, right: 10),
+                      child: Icon(
+                        Icons.search_rounded,
+                        size: 22,
+                        color: Color(0xFF64748B),
+                      ),
+                    ),
+                    prefixIconConstraints: const BoxConstraints(minWidth: 44),
+                    suffixIcon: _searchText.isNotEmpty
+                        ? GestureDetector(
+                            onTap: () {
+                              _searchController.clear();
+                              setState(() {
+                                _searchText = "";
+                              });
+                            },
+                            child: const Icon(
+                              Icons.cancel_rounded,
+                              size: 18,
+                              color: Color(0xFF94A3B8),
+                            ),
+                          )
+                        : null,
+                    hintText: "Sohbetlerde ara...",
+                    hintStyle: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w400,
+                      color: Color(0xFF94A3B8),
+                    ),
+                  ),
+                  onChanged: (value) {
+                    setState(() {
+                      _searchText = value;
+                    });
+                  },
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 14),
+
+            // Mesaj Listesi
+            if (filteredUsers.isEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 40),
+                child: Center(
+                  child: Column(
+                    children: [
+                      Icon(
+                        Icons.search_off_rounded,
+                        size: 48,
+                        color: Colors.grey.shade400,
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        "Sonuç bulunamadı",
+                        style: TextStyle(
+                          fontSize: 15,
+                          color: Colors.grey.shade600,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              )
+            else
+              ...filteredUsers.map((user) {
+                return _buildMessageTile(user);
+              }),
+          ],
         );
 
       case 1:
         return const DiscoverPage();
-
       case 2:
         return const ProfilePage();
-
       default:
         return const SizedBox();
     }
   }
 
-  Widget _glassNavigation() {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(28),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(
-          sigmaX: 25,
-          sigmaY: 25,
-        ),
-        child: Container(
-          height: 72,
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(.15),
-            borderRadius: BorderRadius.circular(28),
-            border: Border.all(
-              color: Colors.white.withOpacity(.45),
+  // Yenilenmiş Sohbet Kartı (Tüm Avatarlar Şık Lacivert/Mavi Gradyanlı)
+  Widget _buildMessageTile(Map<String, dynamic> user) {
+    final int unread = user["unread"] ?? 0;
+    final String name = user["name"] ?? "";
+    final String firstLetter = name.isNotEmpty ? name[0].toUpperCase() : "?";
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      child: Container(
+        decoration: BoxDecoration(
+          color: unread > 0 ? Colors.white : Colors.white.withAlpha(210),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: unread > 0
+                ? const Color(0xFF08314D).withAlpha(20)
+                : Colors.white,
+            width: 1,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.12),
+              blurRadius: 20,
+              spreadRadius: 2,
+              offset: const Offset(0, 8),
             ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(.08),
-                blurRadius: 25,
-                offset: const Offset(0, 10),
-              ),
-            ],
-          ),
-          child: Row(
-            children: [
-              _navButton(
-                index: 0,
-                icon: Icons.chat_bubble_outline_rounded,
-                selectedIcon: Icons.chat_bubble_rounded,
-                text: "Mesajlar",
-              ),
-
-              _navButton(
-                index: 1,
-                icon: Icons.explore_outlined,
-                selectedIcon: Icons.explore,
-                text: "Keşfet",
-              ),
-
-              _navButton(
-                index: 2,
-                icon: Icons.person_outline_rounded,
-                selectedIcon: Icons.person,
-                text: "Profil",
-              ),
-            ],
-          ),
+          ],
         ),
-      ),
-    );
-  }
-
-  Widget _navButton({
-    required int index,
-    required IconData icon,
-    required IconData selectedIcon,
-    required String text,
-  }) {
-    final selected = _selectedIndex == index;
-
-    return Expanded(
-      child: GestureDetector(
-        onTap: () {
-          setState(() {
-            _selectedIndex = index;
-          });
-        },
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 250),
-          curve: Curves.easeOut,
-          margin: const EdgeInsets.all(7),
-          decoration: BoxDecoration(
-            color: selected
-                ? Colors.white.withOpacity(.28)
-                : Colors.transparent,
-            borderRadius: BorderRadius.circular(22),
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              AnimatedScale(
-                duration: const Duration(milliseconds: 250),
-                scale: selected ? 1.18 : 1,
-                child: Icon(
-                  selected ? selectedIcon : icon,
-                  color: selected
-                      ? Theme.of(context).colorScheme.primary
-                      : Colors.black54,
+        child: Material(
+          color: Colors.transparent,
+          borderRadius: BorderRadius.circular(20),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(20),
+            splashColor: const Color(0xFF08314D).withAlpha(15),
+            highlightColor: const Color(0xFF08314D).withAlpha(8),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => ChatsPage(userName: user["name"]),
                 ),
+              );
+            },
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Row(
+                children: [
+                  // Tek Tip Şık Lacivert-Mavi Gradyan Avatar
+                  Container(
+                    width: 52,
+                    height: 52,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: const LinearGradient(
+                        colors: [
+                          Color.fromARGB(255, 14, 56, 84),
+                          Color(0xFF1E5276),
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF08314D).withAlpha(40),
+                          blurRadius: 8,
+                          offset: const Offset(0, 3),
+                        ),
+                      ],
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(
+                      firstLetter,
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(width: 14),
+
+                  // İçerik Alanı
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        // Üst Satır: İsim ve Tarih
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                name,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: unread > 0
+                                      ? FontWeight.w700
+                                      : FontWeight.w600,
+                                  color: const Color(0xFF0F172A),
+                                  letterSpacing: -0.2,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              user["time"] ?? "",
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: unread > 0
+                                    ? FontWeight.w600
+                                    : FontWeight.w400,
+                                color: unread > 0
+                                    ? const Color(0xFF08314D)
+                                    : const Color(0xFF94A3B8),
+                              ),
+                            ),
+                          ],
+                        ),
+
+                        const SizedBox(height: 4),
+
+                        // Alt Satır: Mesaj & Unread Badge
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                user["message"] ?? "",
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: unread > 0
+                                      ? FontWeight.w500
+                                      : FontWeight.w400,
+                                  color: unread > 0
+                                      ? const Color(0xFF1E293B)
+                                      : const Color(0xFF64748B),
+                                ),
+                              ),
+                            ),
+                            if (unread > 0) ...[
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 7,
+                                ),
+                                height: 20,
+                                constraints: const BoxConstraints(minWidth: 20),
+                                alignment: Alignment.center,
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF08314D),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Text(
+                                  unread > 99 ? "99+" : unread.toString(),
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 4),
-              Text(
-                text,
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight:
-                      selected ? FontWeight.w600 : FontWeight.w400,
-                  color: selected
-                      ? Theme.of(context).colorScheme.primary
-                      : Colors.black54,
-                ),
-              ),
-            ],
+            ),
           ),
         ),
       ),
     );
   }
 }
-
-// // messages_page.dart
-
-// import 'package:flutter/material.dart';
-// import 'package:stajapp/widgets/liquid_bottom_bar.dart';
-// import 'liquid_bottom_bar.dart';
-
-// class MessagesPage extends StatefulWidget {
-//   const MessagesPage({super.key});
-
-//   @override
-//   State<MessagesPage> createState() => _MessagesPageState();
-// }
-
-// class _MessagesPageState extends State<MessagesPage> {
-//   int _currentIndex = 0;
-
-//   final List<Map<String, String>> _messages = const [
-//     // {
-//     //   'name': 'Sarah Connor',
-//     //   'message': 'Are we still meeting today at 5?',
-//     //   'time': '10:42 AM',
-//     //   'avatar': 'https://i.pravatar.cc/150?img=1',
-//     // },
-//     // {
-//     //   'name': 'Alex Rivera',
-//     //   'message': 'The Liquid Glass UI design looks insane!',
-//     //   'time': '09:15 AM',
-//     //   'avatar': 'https://i.pravatar.cc/150?img=12',
-//     // },
-//     // {
-//     //   'name': 'Tech Sync Group',
-//     //   'message': 'David: Pushed the latest updates to production.',
-//     //   'time': 'Yesterday',
-//     //   'avatar': 'https://i.pravatar.cc/150?img=33',
-//     // },
-//     // {
-//     //   'name': 'Elena Rostova',
-//     //   'message': 'Thanks for sending over the Flutter assets.',
-//     //   'time': 'Yesterday',
-//     //   'avatar': 'https://i.pravatar.cc/150?img=5',
-//     // },
-//     // {
-//     //   'name': 'Michael Scott',
-//     //   'message': 'That’s what she said!',
-//     //   'time': 'Monday',
-//     //   'avatar': 'https://i.pravatar.cc/150?img=60',
-//     // },
-//   ];
-
-//   @override
-//   Widget build(BuildContext context) {
-//     return Scaffold(
-//       backgroundColor: const Color(0xFF0D0E12),
-//       extendBody: true,
-//       appBar: AppBar(
-//         backgroundColor: Colors.transparent,
-//         elevation: 0,
-//         title: const Text(
-//           'Messages',
-//           style: TextStyle(
-//             fontSize: 28,
-//             fontWeight: FontWeight.bold,
-//             color: Colors.white,
-//           ),
-//         ),
-//         actions: [
-//           IconButton(
-//             icon: const Icon(Icons.edit_note_rounded, color: Colors.white, size: 28),
-//             onPressed: () {},
-//           ),
-//         ],
-//       ),
-//       body: IndexedStack(
-//         index: _currentIndex,
-//         children: [
-//           _buildMessagesList(),
-//           const Center(
-//             child: Text(
-//               'Discover Page',
-//               style: TextStyle(color: Colors.white, fontSize: 20),
-//             ),
-//           ),
-//           const Center(
-//             child: Text(
-//               'Profile Page',
-//               style: TextStyle(color: Colors.white, fontSize: 20),
-//             ),
-//           ),
-//         ],
-//       ),
-//       bottomNavigationBar: LiquidBottomBar(
-//         currentIndex: _currentIndex,
-//         onChanged: (index) {
-//           setState(() {
-//             _currentIndex = index;
-//           });
-//         },
-//       ),
-//     );
-//   }
-
-//   Widget _buildMessagesList() {
-//     return ListView.separated(
-//       padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
-//       itemCount: _messages.length,
-//       separatorBuilder: (context, index) => const Divider(
-//         color: Colors.white10,
-//         height: 1,
-//         indent: 64,
-//       ),
-//       itemBuilder: (context, index) {
-//         final item = _messages[index];
-//         return ListTile(
-//           contentPadding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-//           leading: CircleAvatar(
-//             radius: 26,
-//             backgroundImage: NetworkImage(item['avatar']!),
-//           ),
-//           title: Row(
-//             mainAxisAlignment: MainAxisAlignment.spaceBetween,
-//             children: [
-//               Text(
-//                 item['name']!,
-//                 style: const TextStyle(
-//                   color: Colors.white,
-//                   fontWeight: FontWeight.w600,
-//                   fontSize: 16,
-//                 ),
-//               ),
-//               Text(
-//                 item['time']!,
-//                 style: const TextStyle(
-//                   color: Colors.white38,
-//                   fontSize: 12,
-//                 ),
-//               ),
-//             ],
-//           ),
-//           subtitle: Padding(
-//             padding: const EdgeInsets.only(top: 4),
-//             child: Text(
-//               item['message']!,
-//               maxLines: 1,
-//               overflow: TextOverflow.ellipsis,
-//               style: const TextStyle(
-//                 color: Colors.white70,
-//                 fontSize: 14,
-//               ),
-//             ),
-//           ),
-//           onTap: () {},
-//         );
-//       },
-//     );
-//   }
-// }
