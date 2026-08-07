@@ -26,7 +26,7 @@ class AppTheme {
 
   // Ortak Uyarı ve Hata Renkleri
   static const Color errorColor = Color(0xFFEF4444);
-  static const Color successColor = Color(0xFF10B981);
+  static const Color successColor = Color.fromARGB(255, 26, 52, 43);
 
   // Tipografi Boyutları
   static const double headlineFont1 = 36;
