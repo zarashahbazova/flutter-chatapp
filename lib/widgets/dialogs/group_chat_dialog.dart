@@ -1,0 +1,273 @@
+import 'dart:convert';
+import 'package:flutter/material.dart';
+import '../../services/api_client.dart';
+
+class GroupChatDialog extends StatefulWidget {
+  final ApiClient api;
+  final String token;
+  final int currentUserId;
+  final Function(String groupName, List<String> usernames) onCreateGroup;
+
+  const GroupChatDialog({
+    super.key,
+    required this.api,
+    required this.token,
+    required this.currentUserId,
+    required this.onCreateGroup,
+  });
+
+  @override
+  State<GroupChatDialog> createState() => _GroupChatDialogState();
+}
+
+class _GroupChatDialogState extends State<GroupChatDialog> {
+  final TextEditingController groupNameController = TextEditingController();
+  final TextEditingController searchController = TextEditingController();
+
+  List<String> selectedUsernames = [];
+  List<Map<String, dynamic>> searchSuggestions = [];
+  bool isSearching = false;
+
+  void performSearch(String query) async {
+    if (query.trim().isEmpty) {
+      setState(() => searchSuggestions = []);
+      return;
+    }
+
+    setState(() => isSearching = true);
+
+    try {
+      final response = await widget.api.searchUsers(
+        token: widget.token,
+        query: query.trim(),
+        currentUserId: widget.currentUserId,
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        setState(() {
+          searchSuggestions = List<Map<String, dynamic>>.from(
+            data["data"]["users"],
+          );
+        });
+      }
+    } catch (_) {}
+
+    setState(() => isSearching = false);
+  }
+
+  void addUserToList(String username) {
+    final cleanName = username.trim().replaceAll('@', '');
+    if (cleanName.isNotEmpty && !selectedUsernames.contains(cleanName)) {
+      setState(() {
+        selectedUsernames.add(cleanName);
+        searchController.clear();
+        searchSuggestions = [];
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+      title: const Row(
+        children: [
+          Icon(Icons.groups_rounded, color: Color(0xFF08314D)),
+          SizedBox(width: 8),
+          Text(
+            "Yeni Grup Oluştur",
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+          ),
+        ],
+      ),
+      content: SizedBox(
+        width: MediaQuery.of(context).size.width,
+        height: MediaQuery.of(context).size.height * 0.45,
+        child: ListView(
+          shrinkWrap: true,
+          physics: const BouncingScrollPhysics(),
+          children: [
+            TextField(
+              controller: groupNameController,
+              decoration: InputDecoration(
+                labelText: "Grup Adı",
+                hintText: "Örn: Proje Grubu",
+                prefixIcon: const Icon(Icons.group_work_rounded),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+            const SizedBox(height: 14),
+
+            if (selectedUsernames.isNotEmpty) ...[
+              Text(
+                "Eklenecek Katılımcılar (${selectedUsernames.length}):",
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF08314D),
+                ),
+              ),
+              const SizedBox(height: 6),
+              Wrap(
+                spacing: 6,
+                runSpacing: 4,
+                children: selectedUsernames.map((username) {
+                  return Chip(
+                    backgroundColor: const Color(
+                      0xFF08314D,
+                    ).withOpacity(0.1),
+                    side: BorderSide.none,
+                    avatar: CircleAvatar(
+                      backgroundColor: const Color(0xFF08314D),
+                      child: Text(
+                        username[0].toUpperCase(),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    label: Text(
+                      "@$username",
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF08314D),
+                      ),
+                    ),
+                    deleteIcon: const Icon(
+                      Icons.cancel_rounded,
+                      size: 16,
+                      color: Color(0xFF08314D),
+                    ),
+                    onDeleted: () {
+                      setState(() {
+                        selectedUsernames.remove(username);
+                      });
+                    },
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: 12),
+            ],
+
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: searchController,
+                    onChanged: performSearch,
+                    onSubmitted: (value) => addUserToList(value),
+                    decoration: InputDecoration(
+                      labelText: "Katılımcı Ara / Yaz",
+                      hintText: "Örn: ahmet123",
+                      prefixIcon: const Icon(Icons.person_add_alt_1_rounded),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                IconButton(
+                  style: IconButton.styleFrom(
+                    backgroundColor: const Color(0xFF08314D),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  onPressed: () => addUserToList(searchController.text),
+                  icon: const Icon(Icons.add_rounded),
+                ),
+              ],
+            ),
+
+            if (isSearching)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 8.0),
+                child: LinearProgressIndicator(),
+              ),
+
+            if (searchSuggestions.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.grey.shade300),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: searchSuggestions.map((user) {
+                    final username = user["user_name"].toString();
+                    final bool isAdded = selectedUsernames.contains(username);
+
+                    return ListTile(
+                      dense: true,
+                      title: Text(
+                        user["full_name"] ?? username,
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      subtitle: Text("@$username"),
+                      trailing: Icon(
+                        isAdded
+                            ? Icons.check_circle_rounded
+                            : Icons.add_circle_outline_rounded,
+                        color: isAdded
+                            ? Colors.green
+                            : const Color(0xFF08314D),
+                      ),
+                      onTap: () => addUserToList(username),
+                    );
+                  }).toList(),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context, rootNavigator: true).pop(),
+          child: const Text("İptal", style: TextStyle(color: Colors.grey)),
+        ),
+        ElevatedButton(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF08314D),
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+          onPressed: () {
+            final name = groupNameController.text.trim();
+            if (name.isEmpty) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text("Lütfen grup adını girin.")),
+              );
+              return;
+            }
+            if (selectedUsernames.isEmpty) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text("En az 1 katılımcı eklemelisiniz."),
+                ),
+              );
+              return;
+            }
+
+            Navigator.of(context, rootNavigator: true).pop();
+            widget.onCreateGroup(name, selectedUsernames);
+          },
+          child: Text("Oluştur (${selectedUsernames.length})"),
+        ),
+      ],
+    );
+  }
+}
