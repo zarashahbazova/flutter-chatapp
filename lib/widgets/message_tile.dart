@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:stajapp/themes/tema1.dart';
 
 class MessageTile extends StatelessWidget {
   final Map<String, dynamic> user;
@@ -16,24 +17,29 @@ class MessageTile extends StatelessWidget {
     final String name = user["name"] ?? "";
     final String firstLetter = name.isNotEmpty ? name[0].toUpperCase() : "?";
 
+    // Tema dinamik renkleri
+    final cardBgColor = Theme.of(context).colorScheme.surface;
+    final onSurfaceColor = Theme.of(context).colorScheme.onSurface;
+    final primaryColor = Theme.of(context).colorScheme.primary;
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       child: Container(
         decoration: BoxDecoration(
-          color: unread > 0 ? Colors.white : Colors.white.withAlpha(210),
+          color: unread > 0 ? cardBgColor : cardBgColor.withAlpha(210),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color: unread > 0
-                ? const Color(0xFF08314D).withAlpha(20)
-                : Colors.white,
+                ? primaryColor.withAlpha(50)
+                : cardBgColor.withAlpha(100),
             width: 1,
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.12),
-              blurRadius: 20,
-              spreadRadius: 2,
-              offset: const Offset(0, 8),
+              color: Colors.black.withAlpha(30),
+              blurRadius: 16,
+              spreadRadius: 1,
+              offset: const Offset(0, 6),
             ),
           ],
         ),
@@ -42,7 +48,7 @@ class MessageTile extends StatelessWidget {
           borderRadius: BorderRadius.circular(20),
           child: InkWell(
             borderRadius: BorderRadius.circular(20),
-            splashColor: const Color(0xFF08314D).withAlpha(15),
+            splashColor: primaryColor.withAlpha(20),
             onTap: onTap,
             child: Padding(
               padding: const EdgeInsets.all(12),
@@ -53,17 +59,17 @@ class MessageTile extends StatelessWidget {
                     height: 52,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      gradient: const LinearGradient(
+                      gradient: LinearGradient(
                         colors: [
-                          Color.fromARGB(255, 14, 56, 84),
-                          Color(0xFF1E5276),
+                          AppTheme.primaryNavy,
+                          AppTheme.secondaryNavy,
                         ],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: const Color(0xFF08314D).withAlpha(40),
+                          color: AppTheme.primaryNavy.withAlpha(40),
                           blurRadius: 8,
                           offset: const Offset(0, 3),
                         ),
@@ -97,7 +103,7 @@ class MessageTile extends StatelessWidget {
                                   fontWeight: unread > 0
                                       ? FontWeight.w700
                                       : FontWeight.w600,
-                                  color: const Color(0xFF0F172A),
+                                  color: onSurfaceColor,
                                 ),
                               ),
                             ),
@@ -110,8 +116,8 @@ class MessageTile extends StatelessWidget {
                                     ? FontWeight.w600
                                     : FontWeight.w400,
                                 color: unread > 0
-                                    ? const Color(0xFF08314D)
-                                    : const Color(0xFF94A3B8),
+                                    ? primaryColor
+                                    : onSurfaceColor.withAlpha(120),
                               ),
                             ),
                           ],
@@ -130,8 +136,8 @@ class MessageTile extends StatelessWidget {
                                       ? FontWeight.w500
                                       : FontWeight.w400,
                                   color: unread > 0
-                                      ? const Color(0xFF1E293B)
-                                      : const Color(0xFF64748B),
+                                      ? onSurfaceColor
+                                      : onSurfaceColor.withAlpha(150),
                                 ),
                               ),
                             ),
@@ -145,7 +151,7 @@ class MessageTile extends StatelessWidget {
                                 constraints: const BoxConstraints(minWidth: 20),
                                 alignment: Alignment.center,
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFF08314D),
+                                  color: primaryColor,
                                   borderRadius: BorderRadius.circular(10),
                                 ),
                                 child: Text(

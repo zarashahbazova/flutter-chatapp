@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:stajapp/themes/tema1.dart';
 import '../../services/api_client.dart';
 
 class GroupChatDialog extends StatefulWidget {
@@ -74,7 +75,7 @@ class _GroupChatDialogState extends State<GroupChatDialog> {
       insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
       title: const Row(
         children: [
-          Icon(Icons.groups_rounded, color: Color(0xFF08314D)),
+          Icon(Icons.groups_rounded, color: AppTheme.primaryNavy),
           SizedBox(width: 8),
           Text(
             "Yeni Grup Oluştur",
@@ -103,12 +104,12 @@ class _GroupChatDialogState extends State<GroupChatDialog> {
             const SizedBox(height: 14),
 
             if (selectedUsernames.isNotEmpty) ...[
-              Text(
-                "Eklenecek Katılımcılar (${selectedUsernames.length}):",
-                style: const TextStyle(
+              const Text(
+                "Eklenecek Katılımcılar:",
+                style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF08314D),
+                  color: AppTheme.primaryNavy,
                 ),
               ),
               const SizedBox(height: 6),
@@ -117,12 +118,10 @@ class _GroupChatDialogState extends State<GroupChatDialog> {
                 runSpacing: 4,
                 children: selectedUsernames.map((username) {
                   return Chip(
-                    backgroundColor: const Color(
-                      0xFF08314D,
-                    ).withOpacity(0.1),
+                    backgroundColor: AppTheme.primaryNavy.withOpacity(0.1),
                     side: BorderSide.none,
                     avatar: CircleAvatar(
-                      backgroundColor: const Color(0xFF08314D),
+                      backgroundColor: AppTheme.primaryNavy,
                       child: Text(
                         username[0].toUpperCase(),
                         style: const TextStyle(
@@ -137,13 +136,13 @@ class _GroupChatDialogState extends State<GroupChatDialog> {
                       style: const TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
-                        color: Color(0xFF08314D),
+                        color: AppTheme.primaryNavy,
                       ),
                     ),
                     deleteIcon: const Icon(
                       Icons.cancel_rounded,
                       size: 16,
-                      color: Color(0xFF08314D),
+                      color: AppTheme.primaryNavy,
                     ),
                     onDeleted: () {
                       setState(() {
@@ -176,7 +175,7 @@ class _GroupChatDialogState extends State<GroupChatDialog> {
                 const SizedBox(width: 6),
                 IconButton(
                   style: IconButton.styleFrom(
-                    backgroundColor: const Color(0xFF08314D),
+                    backgroundColor: AppTheme.primaryNavy,
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -198,7 +197,7 @@ class _GroupChatDialogState extends State<GroupChatDialog> {
               const SizedBox(height: 8),
               Container(
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: AppTheme.surfaceColor,
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: Colors.grey.shade300),
                 ),
@@ -221,7 +220,7 @@ class _GroupChatDialogState extends State<GroupChatDialog> {
                             : Icons.add_circle_outline_rounded,
                         color: isAdded
                             ? Colors.green
-                            : const Color(0xFF08314D),
+                            : AppTheme.primaryNavy,
                       ),
                       onTap: () => addUserToList(username),
                     );
@@ -235,11 +234,11 @@ class _GroupChatDialogState extends State<GroupChatDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context, rootNavigator: true).pop(),
-          child: const Text("İptal", style: TextStyle(color: Colors.grey)),
+          child: const Text("İptal", style: TextStyle(color: AppTheme.subtitleColor)),
         ),
         ElevatedButton(
           style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF08314D),
+            backgroundColor: AppTheme.primaryNavy,
             foregroundColor: Colors.white,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
@@ -248,16 +247,18 @@ class _GroupChatDialogState extends State<GroupChatDialog> {
           onPressed: () {
             final name = groupNameController.text.trim();
             if (name.isEmpty) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text("Lütfen grup adını girin.")),
+              AppTheme.showSnackBar(
+                context,
+                message: "Lütfen grup adını girin.",
+                isError: true,
               );
               return;
             }
             if (selectedUsernames.isEmpty) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text("En az 1 katılımcı eklemelisiniz."),
-                ),
+              AppTheme.showSnackBar(
+                context,
+                message: "En az 1 katılımcı eklemelisiniz.",
+                isError: true,
               );
               return;
             }

@@ -12,9 +12,18 @@ import 'dart:io';
 
 final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
     FlutterLocalNotificationsPlugin();
+
+// --- TEMA DURUMU İÇİN GLOBAL NOTIFIER ---
+final ValueNotifier<ThemeMode> themeNotifier = ValueNotifier(ThemeMode.light);
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  // Kayıtlı tema tercihini yükle
+  final prefs = await SharedPreferences.getInstance();
+  final isDark = prefs.getBool("isDarkMode") ?? false;
+  themeNotifier.value = isDark ? ThemeMode.dark : ThemeMode.light;
 
   const AndroidInitializationSettings androidSettings =
       AndroidInitializationSettings('@mipmap/ic_launcher');
@@ -76,17 +85,23 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Staj Uygulaması',
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.lightTheme,
-      home: const AuthCheckPage(),
+    return ValueListenableBuilder<ThemeMode>(
+      valueListenable: themeNotifier,
+      builder: (_, currentMode, __) {
+        return MaterialApp(
+          title: 'Staj Uygulaması',
+          debugShowCheckedModeBanner: false,
+          theme: AppTheme.lightTheme,
+          darkTheme: AppTheme.darkTheme,
+          themeMode: currentMode, // Switch butonuna bağlanan dinamik mod
+          home: const AuthCheckPage(),
+        );
+      },
     );
   }
 }
 
 class AuthCheckPage extends StatefulWidget {
-  //kayıtlı token var mi
   const AuthCheckPage({super.key});
 
   @override
@@ -94,7 +109,7 @@ class AuthCheckPage extends StatefulWidget {
 }
 
 class _AuthCheckPageState extends State<AuthCheckPage> {
-  final ApiClient api = ApiClient(); //api cagirisi
+  final ApiClient api = ApiClient();
 
   @override
   void initState() {

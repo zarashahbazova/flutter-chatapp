@@ -35,7 +35,6 @@ class _LoginPageState extends State<LoginPage> {
     if (value == null || value.trim().isEmpty) {
       return "Kullanıcı adınızı giriniz.";
     }
-
     return null;
   }
 
@@ -43,7 +42,6 @@ class _LoginPageState extends State<LoginPage> {
     if (value == null || value.isEmpty) {
       return "Şifrenizi giriniz.";
     }
-
     return null;
   }
 
@@ -85,6 +83,12 @@ class _LoginPageState extends State<LoginPage> {
 
         if (!mounted) return;
 
+        AppTheme.showSnackBar(
+          context,
+          message: "Giriş başarılı, yönlendiriliyorsunuz...",
+          isError: false,
+        );
+
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (_) => const MessagesPage()),
@@ -119,17 +123,19 @@ class _LoginPageState extends State<LoginPage> {
               key: _formKey,
               child: Column(
                 children: [
-                  const Icon(Icons.account_circle, size: 140),
+                  Icon(
+                    Icons.account_circle,
+                    size: 140,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
 
                   const SizedBox(height: 20),
 
                   Text(
                     "Giriş Yapın",
-                    style: TextStyle(
-                      fontSize: 32,
-                      fontWeight: FontWeight.bold,
-                      color: Theme.of(context).colorScheme.onSurface,
-                    ),
+                    style: Theme.of(context).textTheme.headlineLarge?.copyWith(
+                          fontSize: 32,
+                        ),
                   ),
 
                   const SizedBox(height: 40),
@@ -191,7 +197,10 @@ class _LoginPageState extends State<LoginPage> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Text("Hesabın yok mu?"),
+                      Text(
+                        "Hesabın yok mu?",
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
                       TextButton(
                         onPressed: () {
                           Navigator.push(

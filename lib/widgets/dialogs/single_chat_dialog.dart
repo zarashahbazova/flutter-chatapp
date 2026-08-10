@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:stajapp/themes/tema1.dart';
 import '../../services/api_client.dart';
 
 class SingleChatDialog extends StatefulWidget {
@@ -56,7 +57,7 @@ class _SingleChatDialogState extends State<SingleChatDialog> {
       insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
       title: const Row(
         children: [
-          Icon(Icons.person_add_rounded, color: Color(0xFF08314D)),
+          Icon(Icons.person_add_rounded, color: AppTheme.primaryNavy),
           SizedBox(width: 8),
           Text(
             "Kişisel Sohbet Başlat",
@@ -93,7 +94,7 @@ class _SingleChatDialogState extends State<SingleChatDialog> {
             if (searchSuggestions.isNotEmpty)
               Container(
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: AppTheme.surfaceColor,
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: Colors.grey.shade300),
                 ),
@@ -110,7 +111,7 @@ class _SingleChatDialogState extends State<SingleChatDialog> {
                       trailing: const Icon(
                         Icons.arrow_forward_ios_rounded,
                         size: 14,
-                        color: Color(0xFF08314D),
+                        color: AppTheme.primaryNavy,
                       ),
                       onTap: () {
                         usernameController.text = user["user_name"];
@@ -126,11 +127,11 @@ class _SingleChatDialogState extends State<SingleChatDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context, rootNavigator: true).pop(),
-          child: const Text("İptal", style: TextStyle(color: Colors.grey)),
+          child: const Text("İptal", style: TextStyle(color: AppTheme.subtitleColor)),
         ),
         ElevatedButton(
           style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF08314D),
+            backgroundColor: AppTheme.primaryNavy,
             foregroundColor: Colors.white,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),

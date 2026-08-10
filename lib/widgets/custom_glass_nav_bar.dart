@@ -1,5 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:stajapp/themes/tema1.dart';
 
 class CustomGlassNavBar extends StatelessWidget {
   final int selectedIndex;
@@ -92,12 +93,7 @@ class CustomGlassNavBar extends StatelessWidget {
                         bottom: 0,
                         child: Container(
                           decoration: BoxDecoration(
-                            color: const Color.fromARGB(
-                              255,
-                              4,
-                              38,
-                              73,
-                            ).withAlpha(215),
+                            color: AppTheme.primaryNavy.withAlpha(215),
                             borderRadius: BorderRadius.circular(32),
                           ),
                         ),
@@ -110,8 +106,8 @@ class CustomGlassNavBar extends StatelessWidget {
                             1.0,
                           );
                           Color dynamicColor = Color.lerp(
-                            const Color(0xFF4A5568),
-                            Colors.white,
+                            AppTheme.subtitleColor,
+                            const Color.fromARGB(191, 255, 255, 255),
                             selectionRatio,
                           )!;
 

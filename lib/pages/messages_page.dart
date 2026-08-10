@@ -1,16 +1,13 @@
-
 import 'dart:async';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
-
+import 'package:stajapp/themes/tema1.dart';
 import 'chats_page.dart';
 import 'discover_page.dart';
 import 'profile.dart';
 import '../services/api_client.dart';
-
-// Widget Modülleri
 import '../widgets/message_tile.dart';
 import '../widgets/custom_glass_nav_bar.dart';
 import '../widgets/dialogs/single_chat_dialog.dart';
@@ -30,6 +27,7 @@ class _MessagesPageState extends State<MessagesPage> {
   String? token;
   int? currentUserId;
   int _selectedIndex = 0;
+
   final TextEditingController _searchController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   late PageController _pageController;
@@ -128,7 +126,10 @@ class _MessagesPageState extends State<MessagesPage> {
               "other_user_id": room["other_user_id"],
               "is_group": room["is_group"] ?? false,
               "participants": room["participants"] ?? [],
-              "name": room["display_name"] ?? room["display_username"] ?? "Kullanıcı",
+              "name":
+                  room["display_name"] ??
+                  room["display_username"] ??
+                  "Kullanıcı",
               "message": room["last_message"] ?? "Sohbeti başlatın...",
               "time": _formatTime(room["last_message_time"]),
               "unread": unreadVal,
@@ -155,8 +156,10 @@ class _MessagesPageState extends State<MessagesPage> {
       if (!mounted) return;
 
       if (response.statusCode == 404) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Böyle bir kullanıcı bulunamadı.")),
+        AppTheme.showSnackBar(
+          context,
+          message: "Böyle bir kullanıcı bulunamadı.",
+          isError: true,
         );
         return;
       }
@@ -165,19 +168,20 @@ class _MessagesPageState extends State<MessagesPage> {
         final roomId = data["data"]?["roomId"];
         final bool isExisting = data["data"]?["is_existing"] ?? false;
         final otherUser = data["data"]?["other_user"];
-        final displayName = otherUser?["full_name"] ?? otherUser?["user_name"] ?? targetUsername;
+        final displayName =
+            otherUser?["full_name"] ??
+            otherUser?["user_name"] ??
+            targetUsername;
 
         await loadRooms();
         if (!mounted) return;
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              isExisting
-                  ? "Bu kullanıcıyla zaten sohbetiniz var."
-                  : "Sohbet odası başarıyla oluşturuldu!",
-            ),
-          ),
+        AppTheme.showSnackBar(
+          context,
+          message: isExisting
+              ? "Bu kullanıcıyla zaten sohbetiniz var."
+              : "Sohbet odası başarıyla oluşturuldu!",
+          isError: false,
         );
 
         if (roomId != null) {
@@ -187,7 +191,8 @@ class _MessagesPageState extends State<MessagesPage> {
               builder: (_) => ChatsPage(
                 userName: displayName,
                 roomId: roomId,
-                isGroup: false, participants: null,
+                isGroup: false,
+                participants: null,
               ),
             ),
           ).then((_) => loadRooms(showLoading: false));
@@ -195,11 +200,18 @@ class _MessagesPageState extends State<MessagesPage> {
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Hata oluştu: $e")));
+      AppTheme.showSnackBar(
+        context,
+        message: "Hata oluştu: $e",
+        isError: true,
+      );
     }
   }
 
-  Future<void> _createGroupChat(String groupName, List<String> usernames) async {
+  Future<void> _createGroupChat(
+    String groupName,
+    List<String> usernames,
+  ) async {
     if (token == null || currentUserId == null) return;
 
     try {
@@ -219,8 +231,10 @@ class _MessagesPageState extends State<MessagesPage> {
         await loadRooms();
         if (!mounted) return;
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Grup başarıyla oluşturuldu!")),
+        AppTheme.showSnackBar(
+          context,
+          message: "Grup başarıyla oluşturuldu!",
+          isError: false,
         );
 
         if (roomId != null) {
@@ -230,7 +244,8 @@ class _MessagesPageState extends State<MessagesPage> {
               builder: (_) => ChatsPage(
                 userName: groupName,
                 roomId: roomId,
-                isGroup: true, participants: null,
+                isGroup: true,
+                participants: null,
               ),
             ),
           ).then((_) => loadRooms(showLoading: false));
@@ -238,7 +253,11 @@ class _MessagesPageState extends State<MessagesPage> {
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Hata oluştu: $e")));
+      AppTheme.showSnackBar(
+        context,
+        message: "Hata oluştu: $e",
+        isError: true,
+      );
     }
   }
 
@@ -273,7 +292,7 @@ class _MessagesPageState extends State<MessagesPage> {
   void _openNewChatOptions() {
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -316,15 +335,17 @@ class _MessagesPageState extends State<MessagesPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F6F9),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       extendBody: true,
       body: Stack(
         children: [
           NotificationListener<ScrollNotification>(
             onNotification: (notification) {
-              if (_pageController.hasClients && _pageController.position.haveDimensions) {
+              if (_pageController.hasClients &&
+                  _pageController.position.haveDimensions) {
                 setState(() {
-                  _currentPage = _pageController.page ?? _selectedIndex.toDouble();
+                  _currentPage =
+                      _pageController.page ?? _selectedIndex.toDouble();
                 });
               }
               return false;
@@ -348,21 +369,23 @@ class _MessagesPageState extends State<MessagesPage> {
                     filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
                     child: Container(
                       height: MediaQuery.of(context).padding.top + 52,
-                      padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top),
+                      padding: EdgeInsets.only(
+                        top: MediaQuery.of(context).padding.top,
+                      ),
                       decoration: BoxDecoration(
-                        color: Colors.white.withAlpha(190),
+                        color: Theme.of(context).colorScheme.surface.withAlpha(200),
                         border: Border(
                           bottom: BorderSide(
-                            color: const Color(0xFF08314D).withAlpha(15),
+                            color: Theme.of(context).colorScheme.onSurface.withAlpha(20),
                             width: 0.8,
                           ),
                         ),
                       ),
                       alignment: Alignment.center,
-                      child: const Text(
+                      child: Text(
                         "Sohbetler",
                         style: TextStyle(
-                          color: Color.fromARGB(255, 6, 44, 65),
+                          color: Theme.of(context).colorScheme.onSurface,
                           fontSize: 17,
                           fontWeight: FontWeight.w600,
                         ),
@@ -406,6 +429,10 @@ class _MessagesPageState extends State<MessagesPage> {
           (sum, item) => sum + ((item["unread"] as int?) ?? 0),
         );
 
+        final primaryColor = Theme.of(context).colorScheme.primary;
+        final surfaceColor = Theme.of(context).colorScheme.surface;
+        final onSurfaceColor = Theme.of(context).colorScheme.onSurface;
+
         return ListView(
           controller: _scrollController,
           physics: const BouncingScrollPhysics(),
@@ -421,12 +448,12 @@ class _MessagesPageState extends State<MessagesPage> {
                 children: [
                   Row(
                     children: [
-                      const Text(
+                      Text(
                         "Sohbetler",
                         style: TextStyle(
                           fontSize: 30,
                           fontWeight: FontWeight.w800,
-                          color: Color(0xFF041B2A),
+                          color: onSurfaceColor,
                           letterSpacing: -0.6,
                         ),
                       ),
@@ -438,20 +465,22 @@ class _MessagesPageState extends State<MessagesPage> {
                             vertical: 4,
                           ),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF08314D).withAlpha(18),
+                            color: primaryColor.withAlpha(30),
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: Text(
                             "$totalUnread yeni",
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w700,
-                              color: Color(0xFF08314D),
+                              color: primaryColor,
                             ),
                           ),
                         ),
                     ],
                   ),
+
+                  // Düzenlenen "+" Butonu (Hem Light hem Dark modda şık)
                   GestureDetector(
                     behavior: HitTestBehavior.opaque,
                     onTap: _openNewChatOptions,
@@ -462,12 +491,12 @@ class _MessagesPageState extends State<MessagesPage> {
                         height: 42,
                         alignment: Alignment.center,
                         decoration: BoxDecoration(
-                          color: const Color(0xFF08314D).withAlpha(15),
+                          color: primaryColor.withAlpha(30),
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: const Icon(
+                        child: Icon(
                           Icons.add_rounded,
-                          color: Color(0xFF08314D),
+                          color: primaryColor,
                           size: 26,
                         ),
                       ),
@@ -477,17 +506,22 @@ class _MessagesPageState extends State<MessagesPage> {
               ),
             ),
             const SizedBox(height: 16),
+
+            // Düzenlenen Arama Kutusu (Dark Mod uyumlu)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 18),
               child: Container(
                 height: 46,
                 decoration: BoxDecoration(
-                  color: Colors.white.withAlpha(210),
+                  color: surfaceColor.withAlpha(220),
                   borderRadius: BorderRadius.circular(24),
-                  border: Border.all(color: Colors.white, width: 1.2),
+                  border: Border.all(
+                    color: onSurfaceColor.withAlpha(20),
+                    width: 1.2,
+                  ),
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFF08314D).withAlpha(8),
+                      color: Colors.black.withAlpha(15),
                       blurRadius: 16,
                       spreadRadius: 0,
                       offset: const Offset(0, 4),
@@ -497,10 +531,10 @@ class _MessagesPageState extends State<MessagesPage> {
                 alignment: Alignment.center,
                 child: TextField(
                   controller: _searchController,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w500,
-                    color: Color(0xFF1F2937),
+                    color: onSurfaceColor,
                   ),
                   decoration: InputDecoration(
                     border: InputBorder.none,
@@ -510,12 +544,12 @@ class _MessagesPageState extends State<MessagesPage> {
                     fillColor: Colors.transparent,
                     isDense: true,
                     contentPadding: const EdgeInsets.symmetric(vertical: 0),
-                    prefixIcon: const Padding(
-                      padding: EdgeInsets.only(left: 10, right: 10),
+                    prefixIcon: Padding(
+                      padding: const EdgeInsets.only(left: 10, right: 10),
                       child: Icon(
                         Icons.search_rounded,
                         size: 22,
-                        color: Color(0xFF64748B),
+                        color: onSurfaceColor.withAlpha(140),
                       ),
                     ),
                     prefixIconConstraints: const BoxConstraints(minWidth: 44),
@@ -525,18 +559,18 @@ class _MessagesPageState extends State<MessagesPage> {
                               _searchController.clear();
                               setState(() => _searchText = "");
                             },
-                            child: const Icon(
+                            child: Icon(
                               Icons.cancel_rounded,
                               size: 18,
-                              color: Color(0xFF94A3B8),
+                              color: onSurfaceColor.withAlpha(120),
                             ),
                           )
                         : null,
                     hintText: "Sohbetlerde ara...",
-                    hintStyle: const TextStyle(
+                    hintStyle: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w400,
-                      color: Color(0xFF94A3B8),
+                      color: onSurfaceColor.withAlpha(120),
                     ),
                   ),
                   onChanged: (value) => setState(() => _searchText = value),
@@ -553,14 +587,14 @@ class _MessagesPageState extends State<MessagesPage> {
                       Icon(
                         Icons.search_off_rounded,
                         size: 48,
-                        color: Colors.grey.shade400,
+                        color: onSurfaceColor.withAlpha(100),
                       ),
                       const SizedBox(height: 10),
                       Text(
                         "Sonuç bulunamadı",
                         style: TextStyle(
                           fontSize: 15,
-                          color: Colors.grey.shade600,
+                          color: onSurfaceColor.withAlpha(140),
                           fontWeight: FontWeight.w500,
                         ),
                       ),
@@ -570,10 +604,8 @@ class _MessagesPageState extends State<MessagesPage> {
               )
             else
               ...filteredUsers.map(
-                (user) => MessageTile(
-                  user: user,
-                  onTap: () => _handleTileTap(user),
-                ),
+                (user) =>
+                    MessageTile(user: user, onTap: () => _handleTileTap(user)),
               ),
           ],
         );

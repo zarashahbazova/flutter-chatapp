@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:stajapp/themes/tema1.dart';
 
 class NewChatSheet extends StatelessWidget {
   final VoidCallback onSingleChatTap;
@@ -28,11 +29,11 @@ class NewChatSheet extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             ListTile(
-              leading: const CircleAvatar(
-                backgroundColor: Color(0xFFF0F4F8),
-                child: Icon(
+              leading: CircleAvatar(
+                backgroundColor: AppTheme.primaryNavy.withAlpha(15),
+                child: const Icon(
                   Icons.person_add_rounded,
-                  color: Color(0xFF08314D),
+                  color: AppTheme.primaryNavy,
                 ),
               ),
               title: const Text(
@@ -49,9 +50,9 @@ class NewChatSheet extends StatelessWidget {
             ),
             const Divider(),
             ListTile(
-              leading: const CircleAvatar(
-                backgroundColor: Color(0xFFF0F4F8),
-                child: Icon(Icons.groups_rounded, color: Color(0xFF08314D)),
+              leading: CircleAvatar(
+                backgroundColor: AppTheme.primaryNavy.withAlpha(15),
+                child: const Icon(Icons.groups_rounded, color: AppTheme.primaryNavy),
               ),
               title: const Text(
                 "Yeni Grup Oluştur",

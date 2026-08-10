@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:stajapp/main.dart';
+import 'package:stajapp/themes/tema1.dart';
 import 'login.dart';
 import '../services/api_client.dart';
 import 'package:flutter/services.dart';
@@ -55,7 +57,7 @@ class _ProfilePageState extends State<ProfilePage> {
   @override
   void initState() {
     super.initState();
-    print("INIT STATE CALISTI");
+    _isDarkMode = themeNotifier.value == ThemeMode.dark;
     _loadProfile();
   }
 
@@ -65,10 +67,10 @@ class _ProfilePageState extends State<ProfilePage> {
     await prefs.remove("token");
 
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text("Oturum süreniz doldu. Lütfen tekrar giriş yapın."),
-      ),
+    AppTheme.showSnackBar(
+      context,
+      message: "Oturum süreniz doldu. Lütfen tekrar giriş yapın.",
+      isError: true,
     );
 
     Navigator.pushAndRemoveUntil(
@@ -166,24 +168,30 @@ class _ProfilePageState extends State<ProfilePage> {
 
         if (!mounted) return;
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Profil başarıyla güncellendi.")),
+        AppTheme.showSnackBar(
+          context,
+          message: "Profil başarıyla güncellendi.",
+          isError: false,
         );
       } else {
         final data = jsonDecode(response.body);
 
         if (!mounted) return;
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(data["error"] ?? "Güncelleme başarısız.")),
+        AppTheme.showSnackBar(
+          context,
+          message: data["error"] ?? "Güncelleme başarısız.",
+          isError: true,
         );
       }
     } catch (e) {
       if (!mounted) return;
 
-      ScaffoldMessenger.of(
+      AppTheme.showSnackBar(
         context,
-      ).showSnackBar(SnackBar(content: Text("Bir hata oluştu: $e")));
+        message: "Bir hata oluştu: $e",
+        isError: true,
+      );
     }
   }
 
@@ -235,7 +243,9 @@ class _ProfilePageState extends State<ProfilePage> {
                     width: 40,
                     height: 4,
                     decoration: BoxDecoration(
-                      color: Colors.grey.shade400,
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withAlpha(50),
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
@@ -252,12 +262,9 @@ class _ProfilePageState extends State<ProfilePage> {
 
                   TextFormField(
                     controller: nameController,
-                    decoration: InputDecoration(
+                    decoration: const InputDecoration(
                       labelText: "Ad Soyad",
-                      prefixIcon: const Icon(Icons.person_outline_rounded),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
+                      prefixIcon: Icon(Icons.person_outline_rounded),
                     ),
                     validator: (v) => (v == null || v.trim().isEmpty)
                         ? "Adınızı giriniz."
@@ -267,12 +274,9 @@ class _ProfilePageState extends State<ProfilePage> {
 
                   TextFormField(
                     controller: usernameController,
-                    decoration: InputDecoration(
+                    decoration: const InputDecoration(
                       labelText: "Kullanıcı Adı",
-                      prefixIcon: const Icon(Icons.alternate_email_rounded),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
+                      prefixIcon: Icon(Icons.alternate_email_rounded),
                     ),
                     validator: (v) {
                       if (v == null || v.trim().isEmpty) {
@@ -289,12 +293,9 @@ class _ProfilePageState extends State<ProfilePage> {
                   TextFormField(
                     controller: emailController,
                     keyboardType: TextInputType.emailAddress,
-                    decoration: InputDecoration(
+                    decoration: const InputDecoration(
                       labelText: "E-posta",
-                      prefixIcon: const Icon(Icons.email_outlined),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
+                      prefixIcon: Icon(Icons.email_outlined),
                     ),
                     validator: (v) {
                       if (v == null || v.trim().isEmpty) {
@@ -312,12 +313,9 @@ class _ProfilePageState extends State<ProfilePage> {
                     controller: phoneController,
                     keyboardType: TextInputType.phone,
                     inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                    decoration: InputDecoration(
+                    decoration: const InputDecoration(
                       labelText: "Telefon",
-                      prefixIcon: const Icon(Icons.phone_outlined),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
+                      prefixIcon: Icon(Icons.phone_outlined),
                     ),
                     validator: (v) {
                       if (v == null || v.trim().isEmpty) {
@@ -339,13 +337,10 @@ class _ProfilePageState extends State<ProfilePage> {
                       FilteringTextInputFormatter.digitsOnly,
                       DateInputFormatter(),
                     ],
-                    decoration: InputDecoration(
+                    decoration: const InputDecoration(
                       labelText: "Doğum Tarihi",
                       hintText: "gg-aa-yyyy",
-                      prefixIcon: const Icon(Icons.cake_outlined),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
+                      prefixIcon: Icon(Icons.cake_outlined),
                     ),
                     validator: (v) {
                       if (v == null || v.trim().isEmpty) {
@@ -367,14 +362,6 @@ class _ProfilePageState extends State<ProfilePage> {
                     width: double.infinity,
                     height: 52,
                     child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF08314D),
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        elevation: 0,
-                      ),
                       onPressed: () async {
                         if (formKey.currentState!.validate()) {
                           await _updateProfile(
@@ -390,13 +377,7 @@ class _ProfilePageState extends State<ProfilePage> {
                           }
                         }
                       },
-                      child: const Text(
-                        "Bilgileri Güncelle",
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
+                      child: const Text("Bilgileri Güncelle"),
                     ),
                   ),
                 ],
@@ -418,10 +399,6 @@ class _ProfilePageState extends State<ProfilePage> {
       backgroundColor: Colors.transparent,
       extendBody: true,
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        surfaceTintColor: Colors.transparent,
-        elevation: 0,
-        scrolledUnderElevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.edit_note_rounded, size: 28),
           onPressed: _showEditBottomSheet,
@@ -440,7 +417,7 @@ class _ProfilePageState extends State<ProfilePage> {
           children: [
             const SizedBox(height: 60),
 
-            // Fotoğraf Ekleme İkonlu Profil Avatarı (Yarısı Avatarın Üstünde Daire)
+            // Fotoğraf Ekleme İkonlu Profil Avatarı
             Center(
               child: SizedBox(
                 width: 130,
@@ -454,14 +431,17 @@ class _ProfilePageState extends State<ProfilePage> {
                       height: 130,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFF08314D), Color(0xFF1E5276)],
+                        gradient: LinearGradient(
+                          colors: [
+                            AppTheme.primaryNavy,
+                            AppTheme.secondaryNavy,
+                          ],
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                         ),
                         boxShadow: [
                           BoxShadow(
-                            color: const Color(0xFF08314D).withAlpha(50),
+                            color: AppTheme.primaryNavy.withAlpha(50),
                             blurRadius: 16,
                             offset: const Offset(0, 6),
                           ),
@@ -484,16 +464,16 @@ class _ProfilePageState extends State<ProfilePage> {
                       bottom: -2,
                       child: InkWell(
                         onTap: () {
-                          // Fotoğraf seçme mantığı buraya bağlanabilir
+                          // Fotoğraf seçme mantığı
                         },
                         child: Container(
                           width: 40,
                           height: 40,
                           decoration: BoxDecoration(
-                            color: Colors.white,
+                            color: Theme.of(context).colorScheme.surface,
                             shape: BoxShape.circle,
                             border: Border.all(
-                              color: const Color(0xFFF4F6F9),
+                              color: Theme.of(context).scaffoldBackgroundColor,
                               width: 3,
                             ),
                             boxShadow: [
@@ -504,10 +484,10 @@ class _ProfilePageState extends State<ProfilePage> {
                               ),
                             ],
                           ),
-                          child: const Icon(
+                          child: Icon(
                             Icons.add_a_photo_rounded,
                             size: 19,
-                            color: Color(0xFF08314D),
+                            color: Theme.of(context).colorScheme.primary,
                           ),
                         ),
                       ),
@@ -543,12 +523,15 @@ class _ProfilePageState extends State<ProfilePage> {
 
             const SizedBox(height: 100),
 
-            // Koyu / Açık Tema Switch Kartı (Çıkış Yap Butonunun Üstünde)
+            // Koyu / Açık Tema Switch Kartı
             Container(
               decoration: BoxDecoration(
-                color: Colors.white.withAlpha(200),
+                color: Theme.of(context).colorScheme.surface.withAlpha(200),
                 borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: Colors.white, width: 1),
+                border: Border.all(
+                  color: Theme.of(context).colorScheme.surface,
+                  width: 1,
+                ),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withAlpha(6),
@@ -559,7 +542,7 @@ class _ProfilePageState extends State<ProfilePage> {
               ),
               child: SwitchListTile(
                 value: _isDarkMode,
-                activeThumbColor: const Color(0xFF08314D),
+                activeThumbColor: Theme.of(context).colorScheme.primary,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(18),
                 ),
@@ -567,36 +550,45 @@ class _ProfilePageState extends State<ProfilePage> {
                   _isDarkMode
                       ? Icons.dark_mode_rounded
                       : Icons.light_mode_rounded,
-                  color: const Color(0xFF08314D),
+                  color: Theme.of(context).colorScheme.primary,
                 ),
-                title: const Text(
+                title: Text(
                   "Koyu Tema",
                   style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
-                    color: Color(0xFF0F172A),
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
-                onChanged: (value) {
+                onChanged: (value) async {
                   setState(() {
                     _isDarkMode = value;
                   });
+
+                  // Temayı tüm uygulamada anında güncelle
+                  themeNotifier.value = value
+                      ? ThemeMode.dark
+                      : ThemeMode.light;
+
+                  // Tercihi kalıcı kaydet
+                  final prefs = await SharedPreferences.getInstance();
+                  await prefs.setBool("isDarkMode", value);
                 },
               ),
             ),
 
             const SizedBox(height: 30),
 
-            // Tema Renginde ve Aşağıya Çekilmiş Çıkış Yap Butonu
+            // Çıkış Yap Butonu
             SizedBox(
               width: double.infinity,
               height: 52,
               child: ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF08314D), // Tema ana rengi
+                  backgroundColor: Theme.of(context).colorScheme.primary,
                   foregroundColor: Colors.white,
                   elevation: 2,
-                  shadowColor: const Color(0xFF08314D).withAlpha(60),
+                  shadowColor: Theme.of(context).colorScheme.primary.withAlpha(60),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(18),
                   ),
@@ -610,7 +602,7 @@ class _ProfilePageState extends State<ProfilePage> {
               ),
             ),
 
-            const SizedBox(height: 120), // Bottom Navigation Bar için ek boşluk
+            const SizedBox(height: 120),
           ],
         ),
       ),
