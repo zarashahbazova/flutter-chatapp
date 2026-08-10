@@ -109,7 +109,6 @@
 				59D9F1163572AF61565EFC57 /* Pods-RunnerTests.release.xcconfig */,
 				1908BFE2E062F850734031DE /* Pods-RunnerTests.profile.xcconfig */,
 			);
-			name = Pods;
 			path = Pods;
 			sourceTree = "<group>";
 		};
@@ -687,7 +686,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.example.stajapp;
+				PRODUCT_BUNDLE_IDENTIFIER = com.zarife.stajapp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_OBJC_BRIDGING_HEADER = "Runner/Runner-Bridging-Header.h";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";

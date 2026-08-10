@@ -19,7 +19,6 @@ final ValueNotifier<ThemeMode> themeNotifier = ValueNotifier(ThemeMode.light);
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-
   // Kayıtlı tema tercihini yükle
   final prefs = await SharedPreferences.getInstance();
   final isDark = prefs.getBool("isDarkMode") ?? false;
@@ -41,14 +40,37 @@ Future<void> main() async {
 
   await flutterLocalNotificationsPlugin.initialize(settings);
 
-  if (Platform.isAndroid) {
-    await FirebaseMessaging.instance.requestPermission(
-      alert: true,
-      badge: true,
-      sound: true,
-    );
+  Future<void> setupFirebaseMessaging() async {
+    final messaging = FirebaseMessaging.instance;
 
-    String? fcmToken = await FirebaseMessaging.instance.getToken();
+    // Android + iOS bildirim izni
+    await messaging.requestPermission(alert: true, badge: true, sound: true);
+
+    // iOS'ta APNs token hazır olmadan getToken() çağırma
+    if (Platform.isIOS) {
+      String? apnsToken;
+
+      for (int i = 0; i < 10; i++) {
+        apnsToken = await messaging.getAPNSToken();
+
+        if (apnsToken != null) {
+          break;
+        }
+
+        await Future.delayed(const Duration(seconds: 1));
+      }
+
+      print("APNS TOKEN: $apnsToken");
+
+      if (apnsToken == null) {
+        print("APNS token alınamadı.");
+        return;
+      }
+    }
+
+    // APNs hazır olduktan sonra FCM token al
+    final fcmToken = await messaging.getToken();
+
     print("FCM TOKEN: $fcmToken");
 
     FirebaseMessaging.onMessage.listen((RemoteMessage message) async {
@@ -59,7 +81,8 @@ Future<void> main() async {
 
       final notification = message.notification;
 
-      if (notification != null) {
+      // Local notification sadece Android'de gösteriliyor
+      if (Platform.isAndroid && notification != null) {
         await flutterLocalNotificationsPlugin.show(
           0,
           notification.title,
@@ -77,6 +100,7 @@ Future<void> main() async {
     });
   }
 
+  await setupFirebaseMessaging();
   runApp(const MyApp());
 }
 

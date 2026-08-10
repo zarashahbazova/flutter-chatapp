@@ -2,6 +2,12 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class ApiClient {
+  // ---------------------------------------------------------------------------
+  // IP ADRESİ BİLGİSİ:
+  // - Fiziki Android Telefon: Bilgisayarınızın Wi-Fi IP'si (Örn: http://192.168.60.34:3000)
+  // - Android Emulator: http://10.0.2.2:3000
+  // - iOS Simulator: http://localhost:3000
+  // ---------------------------------------------------------------------------
   static const String baseUrl = "http://192.168.60.34:3000";
 
   Future<http.Response> post({
@@ -39,6 +45,7 @@ class ApiClient {
     );
   }
 
+  // PROFİL FOTOĞRAFI YÜKLEME (MULTIPART)
   Future<http.Response> updateProfilePhoto({
     required String token,
     required String filePath,
@@ -48,7 +55,7 @@ class ApiClient {
 
     request.headers["Authorization"] = "Bearer $token";
 
-    // Backend'in multer tanımında 'photo' olarak bekleniyor
+    // Backend'in Multer ayarında 'photo' ismiyle dosya beklenmektedir[cite: 12]
     request.files.add(await http.MultipartFile.fromPath('photo', filePath));
 
     var streamedResponse = await request.send();
@@ -70,7 +77,7 @@ class ApiClient {
     );
   }
 
-  // AUTH
+  // AUTH ENDPOINTS
   Future<http.Response> login(Map<String, dynamic> body) {
     return post(url: "auth/login", body: body);
   }
@@ -101,7 +108,7 @@ class ApiClient {
     );
   }
 
-  // CHAT
+  // CHAT ENDPOINTS
   Future<http.Response> rooms({required String token, required int userId}) {
     return get(
       url: "chat/rooms",
@@ -147,7 +154,6 @@ class ApiClient {
     );
   }
 
-  // KİŞİSEL SOHBET OLUŞTURMA (USERNAME İLE)
   Future<http.Response> createRoomByUsername({
     required String token,
     required int myUserId,
@@ -160,7 +166,6 @@ class ApiClient {
     );
   }
 
-  // KULLANICI ARAMA / ÖNERİ METODU
   Future<http.Response> searchUsers({
     required String token,
     required String query,
@@ -173,7 +178,6 @@ class ApiClient {
     );
   }
 
-  // GRUP OLUŞTURMA
   Future<http.Response> createGroup({
     required String token,
     required int adminId,
@@ -202,4 +206,27 @@ class ApiClient {
       body: {"user_id": userId, "room_id": roomId},
     );
   }
+  // CHAT - GÖRSEL MESAJ GÖNDERME
+Future<http.Response> sendImageMessage({
+  required String token,
+  required int senderId,
+  required int roomId,
+  required String filePath,
+  String? message,
+}) async {
+  final uri = Uri.parse("$baseUrl/chat/message");
+  var request = http.MultipartRequest("POST", uri);
+
+  request.headers["Authorization"] = "Bearer $token";
+  request.fields["sender_id"] = senderId.toString();
+  request.fields["room_id"] = roomId.toString();
+  if (message != null && message.isNotEmpty) {
+    request.fields["message"] = message;
+  }
+
+  request.files.add(await http.MultipartFile.fromPath('image', filePath));
+
+  var streamedResponse = await request.send();
+  return await http.Response.fromStream(streamedResponse);
+}
 }

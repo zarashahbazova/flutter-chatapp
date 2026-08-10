@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:stajapp/services/api_client.dart';
 import 'package:stajapp/themes/tema1.dart';
 
 class MessageTile extends StatelessWidget {
@@ -16,8 +17,12 @@ class MessageTile extends StatelessWidget {
     final int unread = user["unread"] ?? 0;
     final String name = user["name"] ?? "";
     final String firstLetter = name.isNotEmpty ? name[0].toUpperCase() : "?";
+    final String? photoPath = user["display_photo"] ?? user["profile_photo"];
 
-    // Tema dinamik renkleri
+    final String? fullPhotoUrl = (photoPath != null && photoPath.isNotEmpty)
+        ? "${ApiClient.baseUrl}${photoPath.startsWith('/') ? photoPath : '/$photoPath'}"
+        : null;
+
     final cardBgColor = Theme.of(context).colorScheme.surface;
     final onSurfaceColor = Theme.of(context).colorScheme.onSurface;
     final primaryColor = Theme.of(context).colorScheme.primary;
@@ -54,19 +59,22 @@ class MessageTile extends StatelessWidget {
               padding: const EdgeInsets.all(12),
               child: Row(
                 children: [
+                  // --- AVATAR VEYA PROFİL FOTOĞRAFI ---
                   Container(
                     width: 52,
                     height: 52,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      gradient: LinearGradient(
-                        colors: [
-                          AppTheme.primaryNavy,
-                          AppTheme.secondaryNavy,
-                        ],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
+                      gradient: fullPhotoUrl == null
+                          ? const LinearGradient(
+                              colors: [
+                                AppTheme.primaryNavy,
+                                AppTheme.secondaryNavy,
+                              ],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            )
+                          : null,
                       boxShadow: [
                         BoxShadow(
                           color: AppTheme.primaryNavy.withAlpha(40),
@@ -76,14 +84,31 @@ class MessageTile extends StatelessWidget {
                       ],
                     ),
                     alignment: Alignment.center,
-                    child: Text(
-                      firstLetter,
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
+                    child: fullPhotoUrl != null
+                        ? ClipOval(
+                            child: Image.network(
+                              fullPhotoUrl,
+                              width: 52,
+                              height: 52,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => Text(
+                                firstLetter,
+                                style: const TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          )
+                        : Text(
+                            firstLetter,
+                            style: const TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
                   ),
                   const SizedBox(width: 14),
                   Expanded(
@@ -178,7 +203,6 @@ class MessageTile extends StatelessWidget {
     );
   }
 }
-
 
 
 

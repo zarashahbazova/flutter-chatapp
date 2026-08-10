@@ -419,7 +419,7 @@ class _ProfilePageState extends State<ProfilePage> {
                     controller: nameController,
                     decoration: const InputDecoration(
                       labelText: "Ad Soyad",
-                      prefixIcon: Icon(Icons.person_outline_rounded),
+                      prefixIcon: Icon(Icons.person),
                     ),
                     validator: (v) => (v == null || v.trim().isEmpty)
                         ? "Adınızı giriniz."
@@ -430,7 +430,7 @@ class _ProfilePageState extends State<ProfilePage> {
                     controller: usernameController,
                     decoration: const InputDecoration(
                       labelText: "Kullanıcı Adı",
-                      prefixIcon: Icon(Icons.alternate_email_rounded),
+                      prefixIcon: Icon(Icons.alternate_email_outlined),
                     ),
                     validator: (v) {
                       if (v == null || v.trim().isEmpty)
@@ -446,7 +446,7 @@ class _ProfilePageState extends State<ProfilePage> {
                     keyboardType: TextInputType.emailAddress,
                     decoration: const InputDecoration(
                       labelText: "E-posta",
-                      prefixIcon: Icon(Icons.email_outlined),
+                      prefixIcon: Icon(Icons.email),
                     ),
                     validator: (v) {
                       if (v == null || v.trim().isEmpty)
@@ -465,7 +465,7 @@ class _ProfilePageState extends State<ProfilePage> {
                     decoration: const InputDecoration(
                       labelText: "Telefon",
                       hintText: "5xxxxxxxxx",
-                      prefixIcon: Icon(Icons.phone_outlined),
+                      prefixIcon: Icon(Icons.phone),
                     ),
                     validator: (v) {
                       if (v == null || v.trim().isEmpty) return null;
@@ -485,7 +485,7 @@ class _ProfilePageState extends State<ProfilePage> {
                     decoration: const InputDecoration(
                       labelText: "Doğum Tarihi",
                       hintText: "gg-aa-yyyy",
-                      prefixIcon: Icon(Icons.cake_outlined),
+                      prefixIcon: Icon(Icons.cake),
                     ),
                     validator: (v) {
                       if (v == null || v.trim().isEmpty) return null;
@@ -532,13 +532,10 @@ class _ProfilePageState extends State<ProfilePage> {
         ? _currentName[0].toUpperCase()
         : "?";
 
-    // Backend domain adresi (Kendi sunucu adresinizle güncelleyin)
-    const String baseUrl = "http://10.0.2.2:3000";
     final String? fullPhotoUrl =
         (_profilePhotoUrl != null && _profilePhotoUrl!.isNotEmpty)
-        ? "$baseUrl$_profilePhotoUrl"
+        ? "${ApiClient.baseUrl}${_profilePhotoUrl!.startsWith('/') ? _profilePhotoUrl : '/$_profilePhotoUrl'}?v=${DateTime.now().millisecondsSinceEpoch}"
         : null;
-
     return Scaffold(
       backgroundColor: Colors.transparent,
       extendBody: true,

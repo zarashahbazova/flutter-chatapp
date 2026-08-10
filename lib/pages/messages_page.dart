@@ -48,19 +48,19 @@ class _MessagesPageState extends State<MessagesPage> {
 
     _pageController = PageController(initialPage: _selectedIndex);
     _scrollController.addListener(() {
-      final show = _scrollController.offset > 55;
+      final show = _scrollController.offset > 60;
       if (show != _showSmallTitle) {
         setState(() => _showSmallTitle = show);
       }
     });
 
-    _pollingTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
+    _pollingTimer = Timer.periodic(const Duration(milliseconds: 3500), (timer) {
       if (mounted && _selectedIndex == 0) {
         loadRooms(showLoading: false);
       }
     });
 
-    _setupGlobalFCMListener(); // Genel FCM Dinleyicisi
+    _setupGlobalFCMListener();
   }
 
   @override
@@ -73,7 +73,6 @@ class _MessagesPageState extends State<MessagesPage> {
     super.dispose();
   }
 
-  // üstten gelen bildirim
   void _showTopNotification({required String title, required String body, dynamic roomId}) {
     late OverlayEntry overlayEntry;
 
@@ -95,7 +94,7 @@ class _MessagesPageState extends State<MessagesPage> {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   decoration: BoxDecoration(
-                    color: surfaceColor.withAlpha(210), // Şeffaf zemin
+                    color: surfaceColor.withAlpha(210),
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
                       color: AppTheme.primaryNavy.withAlpha(40),
@@ -163,7 +162,6 @@ class _MessagesPageState extends State<MessagesPage> {
 
     Overlay.of(context).insert(overlayEntry);
 
-    // üstteki bildirimi kaldır
     Future.delayed(const Duration(seconds: 3), () {
       if (overlayEntry.mounted) {
         overlayEntry.remove();
@@ -171,7 +169,6 @@ class _MessagesPageState extends State<MessagesPage> {
     });
   }
 
-  // fcm listener
   void _setupGlobalFCMListener() {
     _fcmSubscription = FirebaseMessaging.onMessage.listen((RemoteMessage message) {
       if (!mounted) return;
@@ -181,7 +178,6 @@ class _MessagesPageState extends State<MessagesPage> {
       final String incomingText = data['message'] ?? data['body'] ?? message.notification?.body ?? "";
       final String title = message.notification?.title ?? "Yeni Mesaj";
 
-      // Kendi attığımız mesaj değilse ve uygulamadaysak üstten bildirim çıkar
       if (incomingSenderId != currentUserId.toString()) {
         _showTopNotification(
           title: title,
@@ -189,7 +185,6 @@ class _MessagesPageState extends State<MessagesPage> {
           roomId: data['room_id'],
         );
 
-        // Sohbet listesini yenile
         loadRooms(showLoading: false);
       }
     });
@@ -253,6 +248,7 @@ class _MessagesPageState extends State<MessagesPage> {
               "other_user_id": room["other_user_id"],
               "is_group": room["is_group"] ?? false,
               "participants": room["participants"] ?? [],
+              "display_photo": room["display_photo"],
               "name":
                   room["display_name"] ??
                   room["display_username"] ??
@@ -299,6 +295,7 @@ class _MessagesPageState extends State<MessagesPage> {
             otherUser?["full_name"] ??
             otherUser?["user_name"] ??
             targetUsername;
+        final profilePhoto = otherUser?["profile_photo"];
 
         await loadRooms();
         if (!mounted) return;
@@ -320,6 +317,7 @@ class _MessagesPageState extends State<MessagesPage> {
                 roomId: roomId,
                 isGroup: false,
                 participants: null,
+                userPhotoUrl: profilePhoto,
               ),
             ),
           ).then((_) => loadRooms(showLoading: false));
@@ -373,6 +371,7 @@ class _MessagesPageState extends State<MessagesPage> {
                 roomId: roomId,
                 isGroup: true,
                 participants: null,
+                userPhotoUrl: null,
               ),
             ),
           ).then((_) => loadRooms(showLoading: false));
@@ -445,6 +444,7 @@ class _MessagesPageState extends State<MessagesPage> {
           roomId: user["room_id"],
           isGroup: user["is_group"] ?? false,
           participants: user["participants"],
+          userPhotoUrl: user["display_photo"],
         ),
       ),
     ).then((_) {

@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'dart:convert';
+import 'package:image_picker/image_picker.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:stajapp/themes/tema1.dart';
@@ -10,11 +12,13 @@ import '../services/api_client.dart';
 class ChatsPage extends StatefulWidget {
   final String userName;
   final int roomId;
+  final String? userPhotoUrl;
 
   const ChatsPage({
     super.key,
     required this.userName,
     required this.roomId,
+    this.userPhotoUrl,
     required isGroup,
     required participants,
   });
@@ -25,17 +29,17 @@ class ChatsPage extends StatefulWidget {
 
 class _ChatsPageState extends State<ChatsPage> {
   final TextEditingController _messageController = TextEditingController();
-  final ScrollController _scrollController =
-      ScrollController(); // ScrollController eklendi
+  final ScrollController _scrollController = ScrollController();
   final ApiClient api = ApiClient();
+  final ImagePicker _picker = ImagePicker();
 
   String? token;
   int? currentUserId;
 
   List<Map<String, dynamic>> messages = [];
   bool isLoading = true;
-
-  // FCM Dinleyicisi Abone Değişkeni
+  bool isSendingImage = false;
+  Timer? _messagesTimer;
   StreamSubscription<RemoteMessage>? _fcmSubscription;
 
   void _scrollToBottom() {
@@ -53,19 +57,25 @@ class _ChatsPageState extends State<ChatsPage> {
   @override
   void initState() {
     super.initState();
+
     loadMessages();
-    _setupFCMListener(); // FCM Dinleyicisi Başlatıldı
+    _setupFCMListener();
+
+    _messagesTimer = Timer.periodic(
+      const Duration(seconds: 3),
+      (_) => _refreshMessages(),
+    );
   }
 
   @override
   void dispose() {
-    _fcmSubscription?.cancel(); // Sayfadan çıkılınca dinleyiciyi kapatıyoruz
+    _messagesTimer?.cancel();
+    _fcmSubscription?.cancel();
     _messageController.dispose();
-    _scrollController.dispose(); // Memory leak önlemek için eklendi
+    _scrollController.dispose();
     super.dispose();
   }
 
-  // --- CANLI MESAJ DİNLEYİCİSİ ---
   void _setupFCMListener() {
     _fcmSubscription = FirebaseMessaging.onMessage.listen((
       RemoteMessage message,
@@ -80,18 +90,19 @@ class _ChatsPageState extends State<ChatsPage> {
           (data['sender_id'] ?? data['senderId'] ?? data['sender'])?.toString();
       final String incomingText =
           data['message'] ?? data['body'] ?? message.notification?.body ?? "";
+      final String? incomingImageUrl = data['image_url'];
 
       final bool isSameRoom =
           incomingRoomId != null &&
           incomingRoomId.trim() == widget.roomId.toString().trim();
 
-      // 1. Kullanıcı ŞU AN o sohbet odasındaysa:
       if (isSameRoom) {
         if (incomingSenderId != currentUserId.toString()) {
           setState(() {
             messages.add({
               "sender_id": incomingSenderId,
               "message": incomingText,
+              "image_url": incomingImageUrl,
               "timestamp":
                   data['timestamp'] ?? DateTime.now().toIso8601String(),
             });
@@ -108,7 +119,6 @@ class _ChatsPageState extends State<ChatsPage> {
           }
         }
       } else {
-        // 2. Kullanıcı başka bir sohbet odasındaysa ÜSTTEN ŞEFFAF BİLDİRİM BANNER'I göster
         final title = message.notification?.title ?? widget.userName;
         final body = message.notification?.body ?? incomingText;
 
@@ -117,7 +127,6 @@ class _ChatsPageState extends State<ChatsPage> {
     });
   }
 
-  // --- SOHBET SAYFASINDAYKEN BAŞKA ODADAN GELEN BİLDİRİM BANNER'I ---
   void _showTopNotificationInChat({
     required String title,
     required String body,
@@ -267,12 +276,78 @@ class _ChatsPageState extends State<ChatsPage> {
           messages = List<Map<String, dynamic>>.from(json["data"]["messages"]);
           isLoading = false;
         });
-        _scrollToBottom(); // Mesajlar yüklenince en alta kaydır
+        _scrollToBottom();
       }
     } catch (e) {
       debugPrint("Mesaj yükleme hatası: $e");
       if (mounted) setState(() => isLoading = false);
     }
+  }
+
+  Future<void> _refreshMessages() async {
+    if (!mounted || token == null || currentUserId == null) return;
+
+    try {
+      final response = await api.messages(
+        token: token!,
+        roomId: widget.roomId,
+        userId: currentUserId!,
+      );
+
+      if (response.statusCode != 200) return;
+
+      final json = jsonDecode(response.body);
+
+      final List<Map<String, dynamic>> newMessages =
+          List<Map<String, dynamic>>.from(json["data"]["messages"]);
+
+      if (!mounted) return;
+
+      // Yeni mesaj yoksa hiçbir şey yapma
+      if (_areMessagesSame(messages, newMessages)) {
+        return;
+      }
+
+      setState(() {
+        messages = newMessages;
+      });
+
+      // Yeni mesaj geldiyse aşağı kaydır
+      _scrollToBottom();
+
+      // Odayı okundu olarak işaretle
+      await api.markAsRead(
+        token: token!,
+        userId: currentUserId!,
+        roomId: widget.roomId,
+      );
+    } catch (e) {
+      debugPrint("Mesaj yenileme hatası: $e");
+    }
+  }
+
+  bool _areMessagesSame(
+    List<Map<String, dynamic>> oldMessages,
+    List<Map<String, dynamic>> newMessages,
+  ) {
+    if (oldMessages.length != newMessages.length) {
+      return false;
+    }
+
+    for (int i = 0; i < oldMessages.length; i++) {
+      final oldMessage = oldMessages[i];
+      final newMessage = newMessages[i];
+
+      if (oldMessage["message"] != newMessage["message"] ||
+          oldMessage["timestamp"] != newMessage["timestamp"] ||
+          oldMessage["sender_id"].toString() !=
+              newMessage["sender_id"].toString() ||
+          oldMessage["image_url"] != newMessage["image_url"]) {
+        return false;
+      }
+    }
+
+    return true;
   }
 
   Future<void> _sendMessage() async {
@@ -290,7 +365,7 @@ class _ChatsPageState extends State<ChatsPage> {
     setState(() {
       messages.add(tempMessage);
     });
-    _scrollToBottom(); // Mesaj gönderilince en alta kaydır
+    _scrollToBottom();
 
     try {
       final response = await api.sendMessage(
@@ -309,11 +384,156 @@ class _ChatsPageState extends State<ChatsPage> {
     }
   }
 
+  // --- İZİN İSTEYİP RESİM SEÇME VE GÖNDERME ---
+  Future<void> _pickAndSendImage(ImageSource source) async {
+    PermissionStatus status;
+
+    if (source == ImageSource.camera) {
+      status = await Permission.camera.request();
+    } else {
+      status = await Permission.photos.request();
+      if (status.isDenied) {
+        status = await Permission.storage.request();
+      }
+    }
+
+    if (status.isPermanentlyDenied) {
+      if (!mounted) return;
+      AppTheme.showSnackBar(
+        context,
+        message: "Lütfen ayarlardan izin verin.",
+        isError: true,
+      );
+      openAppSettings();
+      return;
+    }
+
+    if (status.isGranted || status.isLimited) {
+      final XFile? image = await _picker.pickImage(
+        source: source,
+        imageQuality: 75,
+      );
+
+      if (image != null && token != null && currentUserId != null) {
+        setState(() => isSendingImage = true);
+
+        try {
+          final response = await api.sendImageMessage(
+            token: token!,
+            senderId: currentUserId!,
+            roomId: widget.roomId,
+            filePath: image.path,
+            message: _messageController.text.trim(),
+          );
+
+          if (response.statusCode == 200) {
+            _messageController.clear();
+            await loadMessages();
+          } else {
+            if (!mounted) return;
+            AppTheme.showSnackBar(
+              context,
+              message: "Fotoğraf gönderilemedi.",
+              isError: true,
+            );
+          }
+        } catch (e) {
+          if (!mounted) return;
+          AppTheme.showSnackBar(
+            context,
+            message: "Hata oluştu: $e",
+            isError: true,
+          );
+        } finally {
+          if (mounted) setState(() => isSendingImage = false);
+        }
+      }
+    } else {
+      if (!mounted) return;
+      AppTheme.showSnackBar(
+        context,
+        message: "Gerekli izin verilmedi.",
+        isError: true,
+      );
+    }
+  }
+
+  void _showMediaOptions() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 36,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                ListTile(
+                  leading: CircleAvatar(
+                    backgroundColor: AppTheme.primaryNavy.withAlpha(15),
+                    child: const Icon(
+                      Icons.camera_alt_rounded,
+                      color: AppTheme.primaryNavy,
+                    ),
+                  ),
+                  title: const Text(
+                    "Kamera",
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _pickAndSendImage(ImageSource.camera);
+                  },
+                ),
+                const Divider(),
+                ListTile(
+                  leading: CircleAvatar(
+                    backgroundColor: AppTheme.primaryNavy.withAlpha(15),
+                    child: const Icon(
+                      Icons.photo_library_rounded,
+                      color: AppTheme.primaryNavy,
+                    ),
+                  ),
+                  title: const Text(
+                    "Galeri",
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _pickAndSendImage(ImageSource.gallery);
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final String firstLetter = widget.userName.isNotEmpty
         ? widget.userName[0].toUpperCase()
         : "?";
+
+    final String? fullHeaderPhotoUrl =
+        (widget.userPhotoUrl != null && widget.userPhotoUrl!.isNotEmpty)
+        ? "${ApiClient.baseUrl}${widget.userPhotoUrl!.startsWith('/') ? widget.userPhotoUrl : '/${widget.userPhotoUrl}'}"
+        : null;
 
     final surfaceColor = Theme.of(context).colorScheme.surface;
     final onSurfaceColor = Theme.of(context).colorScheme.onSurface;
@@ -357,26 +577,45 @@ class _ChatsPageState extends State<ChatsPage> {
                               Container(
                                 width: 42,
                                 height: 42,
-                                decoration: const BoxDecoration(
+                                decoration: BoxDecoration(
                                   shape: BoxShape.circle,
-                                  gradient: LinearGradient(
-                                    colors: [
-                                      AppTheme.primaryNavy,
-                                      AppTheme.secondaryNavy,
-                                    ],
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
-                                  ),
+                                  gradient: fullHeaderPhotoUrl == null
+                                      ? const LinearGradient(
+                                          colors: [
+                                            AppTheme.primaryNavy,
+                                            AppTheme.secondaryNavy,
+                                          ],
+                                          begin: Alignment.topLeft,
+                                          end: Alignment.bottomRight,
+                                        )
+                                      : null,
                                 ),
                                 alignment: Alignment.center,
-                                child: Text(
-                                  firstLetter,
-                                  style: const TextStyle(
-                                    fontSize: 17,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white,
-                                  ),
-                                ),
+                                child: fullHeaderPhotoUrl != null
+                                    ? ClipOval(
+                                        child: Image.network(
+                                          fullHeaderPhotoUrl,
+                                          width: 42,
+                                          height: 42,
+                                          fit: BoxFit.cover,
+                                          errorBuilder: (_, __, ___) => Text(
+                                            firstLetter,
+                                            style: const TextStyle(
+                                              fontSize: 17,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.white,
+                                            ),
+                                          ),
+                                        ),
+                                      )
+                                    : Text(
+                                        firstLetter,
+                                        style: const TextStyle(
+                                          fontSize: 17,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.white,
+                                        ),
+                                      ),
                               ),
                             ],
                           ),
@@ -430,7 +669,12 @@ class _ChatsPageState extends State<ChatsPage> {
                       final String formattedTime = _formatTime(
                         message["timestamp"],
                       );
+                      final String? imageUrl = message["image_url"];
 
+                      final String? fullMsgImageUrl =
+                          (imageUrl != null && imageUrl.isNotEmpty)
+                          ? "${ApiClient.baseUrl}${imageUrl.startsWith('/') ? imageUrl : '/$imageUrl'}"
+                          : null;
                       return Align(
                         alignment: me
                             ? Alignment.centerRight
@@ -462,36 +706,119 @@ class _ChatsPageState extends State<ChatsPage> {
                               ),
                             ],
                           ),
-                          child: Row(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment
+                                .end, // <-- KONTROL KUTUSUNU SAĞA HİZALADIK
                             mainAxisSize: MainAxisSize.min,
-                            crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
-                              Flexible(
-                                child: Text(
-                                  message["message"]?.toString() ?? "",
-                                  style: TextStyle(
-                                    fontSize: 15,
-                                    height: 1.3,
-                                    color: me ? Colors.white : onSurfaceColor,
+                              // --- 1. FOTOĞRAF VARSA GÖSTERİMİ ---
+                              if (fullMsgImageUrl != null) ...[
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(12),
+                                  child: Image.network(
+                                    fullMsgImageUrl,
+                                    fit: BoxFit.cover,
+
+                                    frameBuilder:
+                                        (
+                                          context,
+                                          child,
+                                          frame,
+                                          wasSynchronouslyLoaded,
+                                        ) {
+                                          if (frame != null ||
+                                              wasSynchronouslyLoaded) {
+                                            WidgetsBinding.instance
+                                                .addPostFrameCallback((_) {
+                                                  if (mounted) {
+                                                    _scrollToBottom();
+                                                  }
+                                                });
+                                          }
+
+                                          return child;
+                                        },
+
+                                    loadingBuilder:
+                                        (context, child, loadingProgress) {
+                                          if (loadingProgress == null) {
+                                            return child;
+                                          }
+
+                                          return const Padding(
+                                            padding: EdgeInsets.all(20.0),
+                                            child: CircularProgressIndicator(
+                                              color: Colors.white,
+                                            ),
+                                          );
+                                        },
+
+                                    errorBuilder: (context, error, stackTrace) {
+                                      return const Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(
+                                            Icons.broken_image_rounded,
+                                            color: Colors.white54,
+                                          ),
+                                          SizedBox(width: 6),
+                                          Text(
+                                            "Görsel yüklenemedi",
+                                            style: TextStyle(
+                                              color: Colors.white54,
+                                              fontSize: 12,
+                                            ),
+                                          ),
+                                        ],
+                                      );
+                                    },
                                   ),
                                 ),
-                              ),
-                              if (formattedTime.isNotEmpty) ...[
-                                const SizedBox(width: 8),
-                                Padding(
-                                  padding: const EdgeInsets.only(bottom: 1),
-                                  child: Text(
-                                    formattedTime,
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w400,
-                                      color: me
-                                          ? Colors.white.withAlpha(180)
-                                          : onSurfaceColor.withAlpha(120),
-                                    ),
-                                  ),
-                                ),
+                                const SizedBox(height: 6),
                               ],
+
+                              // --- 2. MESAJ METNİ VE SAAT HİZALAMASI ---
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.end, // <-- SAĞA YASLAMA
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  if (message["message"] != null &&
+                                      message["message"]
+                                          .toString()
+                                          .trim()
+                                          .isNotEmpty)
+                                    Flexible(
+                                      child: Padding(
+                                        padding: const EdgeInsets.only(
+                                          right: 8.0,
+                                        ),
+                                        child: Text(
+                                          message["message"]?.toString() ?? "",
+                                          style: TextStyle(
+                                            fontSize: 15,
+                                            height: 1.3,
+                                            color: me
+                                                ? Colors.white
+                                                : onSurfaceColor,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  if (formattedTime.isNotEmpty)
+                                    Text(
+                                      formattedTime,
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w400,
+                                        color: me
+                                            ? Colors.white.withAlpha(180)
+                                            : onSurfaceColor.withAlpha(120),
+                                      ),
+                                    ),
+                                ],
+                              ),
                             ],
                           ),
                         ),
@@ -503,9 +830,25 @@ class _ChatsPageState extends State<ChatsPage> {
           SafeArea(
             top: false,
             child: Container(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+              padding: const EdgeInsets.fromLTRB(12, 8, 16, 12),
               child: Row(
                 children: [
+                  // --- MEDYA EKLEME (+) BUTONU ---
+                  IconButton(
+                    onPressed: isSendingImage ? null : _showMediaOptions,
+                    icon: isSendingImage
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : Icon(
+                            Icons.add_circle_outline_rounded,
+                            color: Theme.of(context).colorScheme.primary,
+                            size: 28,
+                          ),
+                  ),
+
                   Expanded(
                     child: Container(
                       decoration: BoxDecoration(

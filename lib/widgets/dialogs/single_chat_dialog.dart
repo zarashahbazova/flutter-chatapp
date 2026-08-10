@@ -94,7 +94,8 @@ class _SingleChatDialogState extends State<SingleChatDialog> {
             if (searchSuggestions.isNotEmpty)
               Container(
                 decoration: BoxDecoration(
-                  color: AppTheme.surfaceColor,
+                  color: 
+                  AppTheme.surfaceColor,
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: Colors.grey.shade300),
                 ),

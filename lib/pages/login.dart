@@ -53,8 +53,10 @@ class _LoginPageState extends State<LoginPage> {
         "user_name": _usernameController.text.trim(),
         "password": _passwordController.text,
       });
+
       print(response.statusCode);
       print(response.body);
+
       final data = jsonDecode(response.body);
 
       if (response.statusCode == 200) {
@@ -62,30 +64,60 @@ class _LoginPageState extends State<LoginPage> {
 
         final token = data["data"]?["token"];
         final user = data["data"]?["user"];
-       
+
+        if (token == null || user == null) {
+          throw Exception("Backend token veya kullanıcı bilgisi göndermedi.");
+        }
+
         final userId = user["id"] is int
             ? user["id"]
             : int.parse(user["id"].toString());
-        await prefs.setInt("userId", userId);
 
-        if (token == null) {
-          throw Exception("Backend token göndermedi.");
-        }
+        // Kullanıcı bilgilerini kaydet
         await prefs.setString("token", token);
-        await prefs.setInt("userId", user["id"]);
+        await prefs.setInt("userId", userId);
         await prefs.setString("userName", user["user_name"]);
         await prefs.setString("fullName", user["full_name"]);
         await prefs.setString("email", user["email"]);
-        final fcmToken = await FirebaseMessaging.instance.getToken();
 
-        print("FCM TOKEN LOGIN: $fcmToken");
-        await api.updateFcmToken(token: token, fcmToken: fcmToken!);
+        // --------------------------------------------------
+        // FCM TOKEN
+        // --------------------------------------------------
+        // FCM çalışmasa bile LOGIN BAŞARISIZ OLMAYACAK.
+        try {
+          String? fcmToken;
+
+          if (Theme.of(context).platform == TargetPlatform.iOS) {
+            final apnsToken = await FirebaseMessaging.instance.getAPNSToken();
+
+            print("LOGIN APNS TOKEN: $apnsToken");
+
+            if (apnsToken != null) {
+              fcmToken = await FirebaseMessaging.instance.getToken();
+            }
+          } else {
+            fcmToken = await FirebaseMessaging.instance.getToken();
+          }
+
+          print("LOGIN FCM TOKEN: $fcmToken");
+
+          if (fcmToken != null) {
+            await api.updateFcmToken(token: token, fcmToken: fcmToken);
+          }
+        } catch (e) {
+          // FCM problemi login'i engellemeyecek.
+          print("FCM token alınamadı: $e");
+        }
+
+        // --------------------------------------------------
+        // LOGIN BAŞARILI
+        // --------------------------------------------------
 
         if (!mounted) return;
 
         AppTheme.showSnackBar(
           context,
-          message: "Giriş başarılı, yönlendiriliyorsunuz...",
+          message: "Giriş başarılı.",
           isError: false,
         );
 
@@ -95,6 +127,7 @@ class _LoginPageState extends State<LoginPage> {
         );
       } else {
         if (!mounted) return;
+
         AppTheme.showSnackBar(
           context,
           message: data["error"] ?? "Giriş başarısız.",
@@ -103,6 +136,7 @@ class _LoginPageState extends State<LoginPage> {
       }
     } catch (e) {
       if (!mounted) return;
+
       AppTheme.showSnackBar(
         context,
         message: "Sunucuya bağlanılamadı.\n$e",
@@ -133,9 +167,9 @@ class _LoginPageState extends State<LoginPage> {
 
                   Text(
                     "Giriş Yapın",
-                    style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                          fontSize: 32,
-                        ),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.headlineLarge?.copyWith(fontSize: 32),
                   ),
 
                   const SizedBox(height: 40),
