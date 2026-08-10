@@ -32,7 +32,7 @@ class CustomGlassNavBar extends StatelessWidget {
         borderRadius: BorderRadius.circular(40),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withAlpha(20),
+            color: const Color.fromARGB(255, 44, 44, 44).withAlpha(20),
             blurRadius: 30,
             spreadRadius: 2,
             offset: const Offset(0, 10),
@@ -49,7 +49,7 @@ class CustomGlassNavBar extends StatelessWidget {
               color: Colors.white.withAlpha(15),
               borderRadius: BorderRadius.circular(40),
               border: Border.all(
-                color: Colors.white.withAlpha(180),
+                color: const Color.fromARGB(255, 38, 21, 59).withAlpha(20),
                 width: 1.5,
               ),
             ),
@@ -93,7 +93,7 @@ class CustomGlassNavBar extends StatelessWidget {
                         bottom: 0,
                         child: Container(
                           decoration: BoxDecoration(
-                            color: AppTheme.primaryNavy.withAlpha(215),
+                            color: const Color.fromARGB(255, 35, 25, 63).withAlpha(205),
                             borderRadius: BorderRadius.circular(32),
                           ),
                         ),
@@ -106,8 +106,8 @@ class CustomGlassNavBar extends StatelessWidget {
                             1.0,
                           );
                           Color dynamicColor = Color.lerp(
-                            AppTheme.subtitleColor,
-                            const Color.fromARGB(191, 255, 255, 255),
+                            Theme.of(context).colorScheme.onSurface.withAlpha(180),
+                            const Color.fromARGB(227, 232, 219, 255),
                             selectionRatio,
                           )!;
 

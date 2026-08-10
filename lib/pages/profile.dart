@@ -1,12 +1,14 @@
-import 'package:flutter/material.dart';
 import 'dart:convert';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:intl/intl.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:stajapp/main.dart';
 import 'package:stajapp/themes/tema1.dart';
-import 'login.dart';
 import '../services/api_client.dart';
-import 'package:flutter/services.dart';
-import 'package:intl/intl.dart';
+import 'login.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -46,13 +48,16 @@ class DateInputFormatter extends TextInputFormatter {
 
 class _ProfilePageState extends State<ProfilePage> {
   final ApiClient api = ApiClient();
+  final ImagePicker _picker = ImagePicker();
 
   String _currentName = "";
   String _currentUsername = "";
   String _currentEmail = "";
   String _currentPhone = "";
   String _currentBirthDate = "";
-  bool _isDarkMode = false; // Tema kontrol değişkeni
+  String? _profilePhotoUrl; // Profil fotoğrafı URL'i[cite: 12]
+  bool _isDarkMode = false;
+  bool _isUploadingPhoto = false;
 
   @override
   void initState() {
@@ -81,12 +86,10 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Future<void> _loadProfile() async {
-    print("LOAD PROFILE CALISTI");
     try {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString("token");
 
-      print("TOKEN: $token");
       if (token == null) {
         _logout();
         return;
@@ -98,11 +101,10 @@ class _ProfilePageState extends State<ProfilePage> {
         await _handleExpiredToken();
         return;
       }
-
+      print("FOTO YÜKLEME STATUS: ${response.statusCode}");
+      print("FOTO YÜKLEME BODY: ${response.body}");
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        print("PROFILE STATUS: ${response.statusCode}");
-        print("PROFILE BODY: ${response.body}");
         setState(() {
           final profile = data["data"];
 
@@ -110,6 +112,8 @@ class _ProfilePageState extends State<ProfilePage> {
           _currentUsername = profile["user_name"] ?? "";
           _currentEmail = profile["email"] ?? "";
           _currentPhone = profile["phone"] ?? "";
+          _profilePhotoUrl =
+              profile["profile_photo"]; // Backend'den gelen resim yolu[cite: 12]
 
           final birthDate = profile["birth_date"];
 
@@ -126,6 +130,167 @@ class _ProfilePageState extends State<ProfilePage> {
     } catch (e) {
       debugPrint(e.toString());
     }
+  }
+
+  // --- İZİN VE FOTOĞRAF SEÇİM MANTIĞI ---
+  Future<void> _pickAndUploadImage(ImageSource source) async {
+    PermissionStatus status;
+
+    if (source == ImageSource.camera) {
+      status = await Permission.camera.request();
+    } else {
+      status = await Permission.photos.request();
+      if (status.isDenied) {
+        status = await Permission.storage.request();
+      }
+    }
+
+    if (status.isPermanentlyDenied) {
+      if (!mounted) return;
+      AppTheme.showSnackBar(
+        context,
+        message: "Lütfen ayarlardan gerekli izni verin.",
+        isError: true,
+      );
+      openAppSettings();
+      return;
+    }
+
+    if (status.isGranted || status.isLimited) {
+      final XFile? image = await _picker.pickImage(
+        source: source,
+        imageQuality: 80,
+      );
+
+      if (image != null) {
+        await _uploadProfilePhoto(image.path);
+      }
+    } else {
+      if (!mounted) return;
+      AppTheme.showSnackBar(
+        context,
+        message: "Gerekli izin verilmedi.",
+        isError: true,
+      );
+    }
+  }
+
+  // --- SUNUCUYA FOTOĞRAF YÜKLEME ---
+  Future<void> _uploadProfilePhoto(String filePath) async {
+    setState(() => _isUploadingPhoto = true);
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString("token");
+
+      if (token == null) {
+        _logout();
+        return;
+      }
+
+      final response = await api.updateProfilePhoto(
+        token: token,
+        filePath: filePath,
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        setState(() {
+          _profilePhotoUrl =
+              data["data"]["photo_url"]; // Backend'den dönen photo_url[cite: 12]
+        });
+
+        if (!mounted) return;
+        AppTheme.showSnackBar(
+          context,
+          message: "Profil fotoğrafı güncellendi.",
+          isError: false,
+        );
+      } else {
+        if (!mounted) return;
+        AppTheme.showSnackBar(
+          context,
+          message: "Fotoğraf yüklenemedi.",
+          isError: true,
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      AppTheme.showSnackBar(
+        context,
+        message: "Bir hata oluştu: $e",
+        isError: true,
+      );
+    } finally {
+      if (mounted) setState(() => _isUploadingPhoto = false);
+    }
+  }
+
+  // --- GALERİ / KAMERA MENÜSÜ ---
+  void _showImagePickerSheet() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 36,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                ListTile(
+                  leading: CircleAvatar(
+                    backgroundColor: AppTheme.primaryNavy.withAlpha(15),
+                    child: const Icon(
+                      Icons.camera_alt_rounded,
+                      color: AppTheme.primaryNavy,
+                    ),
+                  ),
+                  title: const Text(
+                    "Kamera ile Çek",
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _pickAndUploadImage(ImageSource.camera);
+                  },
+                ),
+                const Divider(),
+                ListTile(
+                  leading: CircleAvatar(
+                    backgroundColor: AppTheme.primaryNavy.withAlpha(15),
+                    child: const Icon(
+                      Icons.photo_library_rounded,
+                      color: AppTheme.primaryNavy,
+                    ),
+                  ),
+                  title: const Text(
+                    "Galeriden Seç",
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _pickAndUploadImage(ImageSource.gallery);
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   Future<void> _updateProfile({
@@ -155,9 +320,6 @@ class _ProfilePageState extends State<ProfilePage> {
         },
       );
 
-      print("STATUS: ${response.statusCode}");
-      print("BODY: ${response.body}");
-
       if (response.statusCode == 401 || response.statusCode == 403) {
         await _handleExpiredToken();
         return;
@@ -167,7 +329,6 @@ class _ProfilePageState extends State<ProfilePage> {
         await _loadProfile();
 
         if (!mounted) return;
-
         AppTheme.showSnackBar(
           context,
           message: "Profil başarıyla güncellendi.",
@@ -175,9 +336,7 @@ class _ProfilePageState extends State<ProfilePage> {
         );
       } else {
         final data = jsonDecode(response.body);
-
         if (!mounted) return;
-
         AppTheme.showSnackBar(
           context,
           message: data["error"] ?? "Güncelleme başarısız.",
@@ -186,7 +345,6 @@ class _ProfilePageState extends State<ProfilePage> {
       }
     } catch (e) {
       if (!mounted) return;
-
       AppTheme.showSnackBar(
         context,
         message: "Bir hata oluştu: $e",
@@ -195,7 +353,6 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
-  // Çıkış Yap
   Future<void> _logout() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove("token");
@@ -208,7 +365,6 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  // bottom sheet
   void _showEditBottomSheet() {
     final formKey = GlobalKey<FormState>();
 
@@ -259,7 +415,6 @@ class _ProfilePageState extends State<ProfilePage> {
                     ),
                   ),
                   const SizedBox(height: 24),
-
                   TextFormField(
                     controller: nameController,
                     decoration: const InputDecoration(
@@ -271,7 +426,6 @@ class _ProfilePageState extends State<ProfilePage> {
                         : null,
                   ),
                   const SizedBox(height: 16),
-
                   TextFormField(
                     controller: usernameController,
                     decoration: const InputDecoration(
@@ -279,17 +433,14 @@ class _ProfilePageState extends State<ProfilePage> {
                       prefixIcon: Icon(Icons.alternate_email_rounded),
                     ),
                     validator: (v) {
-                      if (v == null || v.trim().isEmpty) {
+                      if (v == null || v.trim().isEmpty)
                         return "Kullanıcı adınızı giriniz.";
-                      }
-                      if (v.length < 3 || v.length > 20) {
+                      if (v.length < 3 || v.length > 20)
                         return "3-20 karakter olmalıdır.";
-                      }
                       return null;
                     },
                   ),
                   const SizedBox(height: 16),
-
                   TextFormField(
                     controller: emailController,
                     keyboardType: TextInputType.emailAddress,
@@ -298,13 +449,11 @@ class _ProfilePageState extends State<ProfilePage> {
                       prefixIcon: Icon(Icons.email_outlined),
                     ),
                     validator: (v) {
-                      if (v == null || v.trim().isEmpty) {
+                      if (v == null || v.trim().isEmpty)
                         return "E-posta giriniz.";
-                      }
                       final regex = RegExp(r'^[^@]+@[^@]+\.[^@]+');
-                      if (!regex.hasMatch(v.trim())) {
+                      if (!regex.hasMatch(v.trim()))
                         return "Geçerli bir e-posta giriniz.";
-                      }
                       return null;
                     },
                   ),
@@ -315,17 +464,13 @@ class _ProfilePageState extends State<ProfilePage> {
                     inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                     decoration: const InputDecoration(
                       labelText: "Telefon",
+                      hintText: "5xxxxxxxxx",
                       prefixIcon: Icon(Icons.phone_outlined),
                     ),
                     validator: (v) {
-                      if (v == null || v.trim().isEmpty) {
-                        return null;
-                      }
-
-                      if (!RegExp(r'^\d{11}$').hasMatch(v.trim())) {
-                        return "Telefon numarası 11 haneli olmalıdır.";
-                      }
-
+                      if (v == null || v.trim().isEmpty) return null;
+                      if (!RegExp(r'^\d{10}$').hasMatch(v.trim()))
+                        return "Telefon numarası 10 haneli olmalıdır.";
                       return null;
                     },
                   ),
@@ -343,21 +488,16 @@ class _ProfilePageState extends State<ProfilePage> {
                       prefixIcon: Icon(Icons.cake_outlined),
                     ),
                     validator: (v) {
-                      if (v == null || v.trim().isEmpty) {
-                        return null;
-                      }
-
+                      if (v == null || v.trim().isEmpty) return null;
                       try {
                         DateFormat("dd-MM-yyyy").parseStrict(v.trim());
                       } catch (_) {
                         return "Tarih gg-aa-yyyy formatında olmalıdır.";
                       }
-
                       return null;
                     },
                   ),
                   const SizedBox(height: 28),
-
                   SizedBox(
                     width: double.infinity,
                     height: 52,
@@ -371,10 +511,7 @@ class _ProfilePageState extends State<ProfilePage> {
                             phone: phoneController.text.trim(),
                             birth_date: birth_dateController.text.trim(),
                           );
-
-                          if (context.mounted) {
-                            Navigator.pop(context);
-                          }
+                          if (context.mounted) Navigator.pop(context);
                         }
                       },
                       child: const Text("Bilgileri Güncelle"),
@@ -394,6 +531,13 @@ class _ProfilePageState extends State<ProfilePage> {
     final String firstLetter = _currentName.isNotEmpty
         ? _currentName[0].toUpperCase()
         : "?";
+
+    // Backend domain adresi (Kendi sunucu adresinizle güncelleyin)
+    const String baseUrl = "http://10.0.2.2:3000";
+    final String? fullPhotoUrl =
+        (_profilePhotoUrl != null && _profilePhotoUrl!.isNotEmpty)
+        ? "$baseUrl$_profilePhotoUrl"
+        : null;
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -417,7 +561,7 @@ class _ProfilePageState extends State<ProfilePage> {
           children: [
             const SizedBox(height: 60),
 
-            // Fotoğraf Ekleme İkonlu Profil Avatarı
+            // Profil Avatarı ve Fotoğraf Seçim Butonu
             Center(
               child: SizedBox(
                 width: 130,
@@ -425,20 +569,21 @@ class _ProfilePageState extends State<ProfilePage> {
                 child: Stack(
                   clipBehavior: Clip.none,
                   children: [
-                    // Ana Profil Avatarı
                     Container(
                       width: 130,
                       height: 130,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        gradient: LinearGradient(
-                          colors: [
-                            AppTheme.primaryNavy,
-                            AppTheme.secondaryNavy,
-                          ],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
+                        gradient: fullPhotoUrl == null
+                            ? const LinearGradient(
+                                colors: [
+                                  AppTheme.primaryNavy,
+                                  AppTheme.secondaryNavy,
+                                ],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              )
+                            : null,
                         boxShadow: [
                           BoxShadow(
                             color: AppTheme.primaryNavy.withAlpha(50),
@@ -448,14 +593,33 @@ class _ProfilePageState extends State<ProfilePage> {
                         ],
                       ),
                       alignment: Alignment.center,
-                      child: Text(
-                        firstLetter,
-                        style: const TextStyle(
-                          fontSize: 48,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
+                      child: _isUploadingPhoto
+                          ? const CircularProgressIndicator(color: Colors.white)
+                          : fullPhotoUrl != null
+                          ? ClipOval(
+                              child: Image.network(
+                                fullPhotoUrl,
+                                width: 130,
+                                height: 130,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) => Text(
+                                  firstLetter,
+                                  style: const TextStyle(
+                                    fontSize: 48,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
+                            )
+                          : Text(
+                              firstLetter,
+                              style: const TextStyle(
+                                fontSize: 48,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
                     ),
 
                     // Sağ Alt Köşedeki Fotoğraf Ekleme Dairesi
@@ -463,9 +627,7 @@ class _ProfilePageState extends State<ProfilePage> {
                       right: -2,
                       bottom: -2,
                       child: InkWell(
-                        onTap: () {
-                          // Fotoğraf seçme mantığı
-                        },
+                        onTap: _showImagePickerSheet,
                         child: Container(
                           width: 40,
                           height: 40,
@@ -561,16 +723,10 @@ class _ProfilePageState extends State<ProfilePage> {
                   ),
                 ),
                 onChanged: (value) async {
-                  setState(() {
-                    _isDarkMode = value;
-                  });
-
-                  // Temayı tüm uygulamada anında güncelle
+                  setState(() => _isDarkMode = value);
                   themeNotifier.value = value
                       ? ThemeMode.dark
                       : ThemeMode.light;
-
-                  // Tercihi kalıcı kaydet
                   final prefs = await SharedPreferences.getInstance();
                   await prefs.setBool("isDarkMode", value);
                 },
@@ -588,7 +744,9 @@ class _ProfilePageState extends State<ProfilePage> {
                   backgroundColor: Theme.of(context).colorScheme.primary,
                   foregroundColor: Colors.white,
                   elevation: 2,
-                  shadowColor: Theme.of(context).colorScheme.primary.withAlpha(60),
+                  shadowColor: Theme.of(
+                    context,
+                  ).colorScheme.primary.withAlpha(60),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(18),
                   ),

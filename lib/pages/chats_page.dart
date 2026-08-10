@@ -25,7 +25,8 @@ class ChatsPage extends StatefulWidget {
 
 class _ChatsPageState extends State<ChatsPage> {
   final TextEditingController _messageController = TextEditingController();
-  final ScrollController _scrollController = ScrollController(); // ScrollController eklendi
+  final ScrollController _scrollController =
+      ScrollController(); // ScrollController eklendi
   final ApiClient api = ApiClient();
 
   String? token;
@@ -66,36 +67,38 @@ class _ChatsPageState extends State<ChatsPage> {
 
   // --- CANLI MESAJ DİNLEYİCİSİ ---
   void _setupFCMListener() {
-    _fcmSubscription = FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+    _fcmSubscription = FirebaseMessaging.onMessage.listen((
+      RemoteMessage message,
+    ) {
       if (!mounted) return;
 
       final data = message.data;
 
-      // Backend'den farklı türde gelebilecek room_id ve sender_id 'yi garantiye alıyoruz
-      final String? incomingRoomId = (data['room_id'] ?? data['roomId'] ?? data['room'])?.toString();
-      final String? incomingSenderId = (data['sender_id'] ?? data['senderId'] ?? data['sender'])?.toString();
-      final String incomingText = data['message'] ?? data['body'] ?? message.notification?.body ?? "";
+      final String? incomingRoomId =
+          (data['room_id'] ?? data['roomId'] ?? data['room'])?.toString();
+      final String? incomingSenderId =
+          (data['sender_id'] ?? data['senderId'] ?? data['sender'])?.toString();
+      final String incomingText =
+          data['message'] ?? data['body'] ?? message.notification?.body ?? "";
 
-      // Tip uyuşmazlığını engellemek için ikisini de trim edip karşılaştırıyoruz
-      final bool isSameRoom = incomingRoomId != null &&
+      final bool isSameRoom =
+          incomingRoomId != null &&
           incomingRoomId.trim() == widget.roomId.toString().trim();
 
       // 1. Kullanıcı ŞU AN o sohbet odasındaysa:
       if (isSameRoom) {
-        // Eğer gelen mesaj kendi attığımız mesaj değilse listeye ekle
         if (incomingSenderId != currentUserId.toString()) {
           setState(() {
             messages.add({
               "sender_id": incomingSenderId,
               "message": incomingText,
-              "timestamp": data['timestamp'] ?? DateTime.now().toIso8601String(),
+              "timestamp":
+                  data['timestamp'] ?? DateTime.now().toIso8601String(),
             });
           });
 
-          // Mesaj gelince sayfayı OTOMATİK EN ALTA KAYDIR
           _scrollToBottom();
 
-          // Okundu bilgisi gönder
           if (token != null && currentUserId != null) {
             api.markAsRead(
               token: token!,
@@ -105,15 +108,114 @@ class _ChatsPageState extends State<ChatsPage> {
           }
         }
       } else {
-        // 2. Kullanıcı başka bir odada veya sayfadaysa SnackBar göster
+        // 2. Kullanıcı başka bir sohbet odasındaysa ÜSTTEN ŞEFFAF BİLDİRİM BANNER'I göster
         final title = message.notification?.title ?? widget.userName;
         final body = message.notification?.body ?? incomingText;
 
-        AppTheme.showSnackBar(
-          context,
-          message: "$title: $body",
-          isError: false,
+        _showTopNotificationInChat(title: title, body: body);
+      }
+    });
+  }
+
+  // --- SOHBET SAYFASINDAYKEN BAŞKA ODADAN GELEN BİLDİRİM BANNER'I ---
+  void _showTopNotificationInChat({
+    required String title,
+    required String body,
+  }) {
+    late OverlayEntry overlayEntry;
+
+    overlayEntry = OverlayEntry(
+      builder: (context) {
+        final surfaceColor = Theme.of(context).colorScheme.surface;
+        final onSurfaceColor = Theme.of(context).colorScheme.onSurface;
+
+        return Positioned(
+          top: MediaQuery.of(context).padding.top + 10,
+          left: 16,
+          right: 16,
+          child: Material(
+            color: Colors.transparent,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(20),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
+                  decoration: BoxDecoration(
+                    color: surfaceColor.withAlpha(210),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: AppTheme.primaryNavy.withAlpha(40),
+                      width: 1,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withAlpha(30),
+                        blurRadius: 16,
+                        offset: const Offset(0, 6),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 40,
+                        height: 40,
+                        decoration: const BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: AppTheme.primaryNavy,
+                        ),
+                        child: const Icon(
+                          Icons.chat_bubble_outline_rounded,
+                          color: Colors.white,
+                          size: 20,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              title,
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: onSurfaceColor,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              body,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: onSurfaceColor.withAlpha(160),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
         );
+      },
+    );
+
+    Overlay.of(context).insert(overlayEntry);
+
+    Future.delayed(const Duration(milliseconds: 3500), () {
+      if (overlayEntry.mounted) {
+        overlayEntry.remove();
       }
     });
   }

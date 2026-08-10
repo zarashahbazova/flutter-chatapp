@@ -4,24 +4,62 @@ class AppTheme {
   // --- MESAJ KARTLARI VE EKRANIYLA BİREBİR UYUMLU LACİVERT PALETİ ---
   
   // Light Mode Renkleri
-  static const Color primaryNavy = Color(0xFF08314D);       // Mesaj balonu & Buton Laciverti
-  static const Color darkNavy = Color(0xFF041B2A);          // Koyu Başlık Laciverti
-  static const Color secondaryNavy = Color(0xFF1E5276);     // Gradient İkinci Tonu
-  static const Color backgroundColor = Color(0xFFF4F6F9);   // Sayfa Zemin Rengi
+  // static const Color primaryNavy = Color(0xFF08314D);       // Mesaj balonu & Buton Laciverti
+  // static const Color darkNavy = Color(0xFF041B2A);          // Koyu Başlık Laciverti
+  // static const Color secondaryNavy = Color(0xFF1E5276);     // Gradient İkinci Tonu
+  // static const Color backgroundColor = Color(0xFFF4F6F9);   // Sayfa Zemin Rengi
+  // static const Color surfaceColor = Color(0xFFFFFFFF);       // Kart ve Input Dolgu Rengi
+  // static const Color textColor = Color(0xFF0F172A);          // Koyu Metin Rengi
+  // static const Color subtitleColor = Color(0xFF64748B);      // İkincil Metin Rengi
+  // static const Color hintColor = Color(0xFF94A3B8);          // İpucu Metin Rengi
+
+  // // Dark Mode Renkleri
+  // static const Color darkBackgroundColor = Color(0xFF0A192F); // Derin Gece Mavisi Zemin
+  // static const Color darkSurfaceColor = Color(0xFF102A43);     // Koyu Kart ve Input Rengi
+  // static const Color darkTextColor = Color(0xFFF8FAFC);        // Açık Renk Metin
+  // static const Color darkSubtitleColor = Color(0xFF94A3B8);    // İkincil Metin Rengi
+  // static const Color darkAccentBlue = Color(0xFF38BDF8);       // Canlı Açık Mavi Vurgu
+
+  // // Efektler & Cam (Glassmorphism) Detayları
+  // static const Color shadow = Color(0x1A08314D);
+
+  // static const Color primaryNavy = Color.fromARGB(255, 38, 56, 68);       // Mesaj balonu & Buton Laciverti
+  // static const Color darkNavy = Color.fromARGB(255, 31, 47, 57);          // Koyu Başlık Laciverti
+  // static const Color secondaryNavy = Color.fromARGB(255, 56, 82, 97);     // Gradient İkinci Tonu
+  // static const Color backgroundColor = Color.fromARGB(255, 251, 252, 252);   // Sayfa Zemin Rengi
+  // static const Color surfaceColor = Color(0xFFFFFFFF);       // Kart ve Input Dolgu Rengi
+  // static const Color textColor = Color.fromARGB(255, 0, 0, 0);          // Koyu Metin Rengi
+  // static const Color subtitleColor = Color.fromARGB(255, 101, 117, 139);      // İkincil Metin Rengi
+  // static const Color hintColor = Color(0xFF94A3B8);          // İpucu Metin Rengi
+
+  // // Dark Mode Renkleri
+  // static const Color darkBackgroundColor = Color.fromARGB(255, 1, 6, 12); // Derin Gece Mavisi Zemin
+  // static const Color darkSurfaceColor = Color.fromARGB(255, 27, 34, 41);     // Koyu Kart ve Input Rengi
+  // static const Color darkTextColor = Color(0xFFF8FAFC);        // Açık Renk Metin
+  // static const Color darkSubtitleColor = Color(0xFF94A3B8);    // İkincil Metin Rengi
+  // static const Color darkAccentBlue = Color.fromARGB(116, 54, 82, 139);       // Canlı Açık Mavi Vurgu
+
+
+
+  static const Color primaryNavy = Color.fromARGB(255, 38, 27, 58);       // Mesaj balonu & Buton Laciverti
+  static const Color darkNavy = Color.fromARGB(255, 126, 105, 162);      // Koyu Başlık Laciverti
+  static const Color secondaryNavy = Color.fromARGB(255, 61, 47, 84);   // Gradient İkinci Tonu
+  static const Color backgroundColor = Color.fromARGB(255, 251, 252, 252);   // Sayfa Zemin Rengi
   static const Color surfaceColor = Color(0xFFFFFFFF);       // Kart ve Input Dolgu Rengi
-  static const Color textColor = Color(0xFF0F172A);          // Koyu Metin Rengi
-  static const Color subtitleColor = Color(0xFF64748B);      // İkincil Metin Rengi
-  static const Color hintColor = Color(0xFF94A3B8);          // İpucu Metin Rengi
+  static const Color textColor = Color.fromARGB(255, 0, 0, 0);          // Koyu Metin Rengi
+  static const Color subtitleColor = Color.fromARGB(255, 49, 38, 68);    // İkincil Metin Rengi
+  static const Color hintColor = Color.fromARGB(255, 151, 140, 179);          // İpucu Metin Rengi
 
   // Dark Mode Renkleri
-  static const Color darkBackgroundColor = Color(0xFF0A192F); // Derin Gece Mavisi Zemin
-  static const Color darkSurfaceColor = Color(0xFF102A43);     // Koyu Kart ve Input Rengi
+  static const Color darkBackgroundColor = Color.fromARGB(255, 1, 6, 12); // Derin Gece Mavisi Zemin
+  static const Color darkSurfaceColor = Color.fromARGB(255, 27, 34, 41);     // Koyu Kart ve Input Rengi
   static const Color darkTextColor = Color(0xFFF8FAFC);        // Açık Renk Metin
-  static const Color darkSubtitleColor = Color(0xFF94A3B8);    // İkincil Metin Rengi
-  static const Color darkAccentBlue = Color(0xFF38BDF8);       // Canlı Açık Mavi Vurgu
+  static const Color darkSubtitleColor = Color.fromARGB(255, 157, 137, 179);    // İkincil Metin Rengi
+  static const Color darkAccentBlue = Color.fromARGB(255, 49, 38, 68);      // Canlı Açık Mavi Vurgu
+
 
   // Efektler & Cam (Glassmorphism) Detayları
-  static const Color shadow = Color(0x1A08314D);
+  static const Color shadow = Color.fromARGB(255, 67, 50, 96);
 
   // Ortak Uyarı ve Hata Renkleri
   static const Color errorColor = Color(0xFFEF4444);        // Kırmızımsı Hata Rengi
@@ -72,7 +110,7 @@ class AppTheme {
       colorScheme: ColorScheme.fromSeed(
         seedColor: primaryNavy,
         primary: primaryNavy,
-        secondary: secondaryNavy,
+        secondary: const Color.fromARGB(255, 53, 44, 69),
         surface: surfaceColor,
         onSurface: textColor,
         brightness: Brightness.light,
@@ -127,7 +165,7 @@ class AppTheme {
         prefixIconColor: subtitleColor,
         suffixIconColor: subtitleColor,
         filled: true,
-        fillColor: surfaceColor,
+        fillColor: const Color.fromARGB(255, 255, 255, 255),
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 16,
           vertical: 16,
@@ -135,17 +173,17 @@ class AppTheme {
         
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+          borderSide: const BorderSide(color: Color.fromARGB(159, 232, 226, 240)),
         ),
         
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
+          borderSide: const BorderSide(color: Color.fromARGB(174, 213, 203, 225)),
         ),
 
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: primaryNavy, width: 2),
+          borderSide: const BorderSide(color: Color.fromARGB(255, 27, 22, 63), width: 2),
         ),
 
         errorBorder: OutlineInputBorder(
@@ -187,7 +225,7 @@ class AppTheme {
         seedColor: darkAccentBlue,
         primary: darkAccentBlue,
         secondary: secondaryNavy,
-        surface: darkSurfaceColor,
+        surface: const Color.fromARGB(162, 20, 17, 26),
         onSurface: darkTextColor,
         brightness: Brightness.dark,
       ),
@@ -241,7 +279,7 @@ class AppTheme {
         prefixIconColor: darkSubtitleColor,
         suffixIconColor: darkSubtitleColor,
         filled: true,
-        fillColor: darkSurfaceColor,
+        fillColor: const Color.fromARGB(255, 33, 27, 41),
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 16,
           vertical: 16,
@@ -249,12 +287,12 @@ class AppTheme {
         
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: Color(0xFF1E293B)),
+          borderSide: const BorderSide(color: Color.fromARGB(255, 39, 30, 59)),
         ),
         
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: Color(0xFF334155)),
+          borderSide: const BorderSide(color: Color.fromARGB(255, 72, 51, 85)),
         ),
 
         focusedBorder: OutlineInputBorder(

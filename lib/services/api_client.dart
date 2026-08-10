@@ -39,6 +39,22 @@ class ApiClient {
     );
   }
 
+  Future<http.Response> updateProfilePhoto({
+    required String token,
+    required String filePath,
+  }) async {
+    final uri = Uri.parse("$baseUrl/auth/profile/photo");
+    var request = http.MultipartRequest("PUT", uri);
+
+    request.headers["Authorization"] = "Bearer $token";
+
+    // Backend'in multer tanımında 'photo' olarak bekleniyor
+    request.files.add(await http.MultipartFile.fromPath('photo', filePath));
+
+    var streamedResponse = await request.send();
+    return await http.Response.fromStream(streamedResponse);
+  }
+
   Future<http.Response> put({
     required String url,
     required Map<String, dynamic> body,
@@ -145,7 +161,7 @@ class ApiClient {
   }
 
   // KULLANICI ARAMA / ÖNERİ METODU
-Future<http.Response> searchUsers({
+  Future<http.Response> searchUsers({
     required String token,
     required String query,
     required int currentUserId,
@@ -153,33 +169,29 @@ Future<http.Response> searchUsers({
     return get(
       url: "chat/search-users",
       token: token,
-      queryParameters: {
-        "query": query,
-        "current_user_id": currentUserId,
-      },
+      queryParameters: {"query": query, "current_user_id": currentUserId},
     );
   }
 
   // GRUP OLUŞTURMA
-Future<http.Response> createGroup({
-  required String token,
-  required int adminId,
-  required String roomName,
-  required List<String> participantUsernames,
-}) {
+  Future<http.Response> createGroup({
+    required String token,
+    required int adminId,
+    required String roomName,
+    required List<String> participantUsernames,
+  }) {
+    return post(
+      url: "chat/getOrCreateGroup",
+      token: token,
+      body: {
+        "admin_id": adminId,
+        "room_name": roomName,
+        "participant_usernames": participantUsernames,
+      },
+    );
+  }
 
-  return post(
-    url: "chat/getOrCreateGroup",
-    token: token,
-    body: {
-      "admin_id": adminId,
-      "room_name": roomName,
-      "participant_usernames": participantUsernames,
-    },
-  );
-}
-
-Future<http.Response> markAsRead({
+  Future<http.Response> markAsRead({
     required String token,
     required int userId,
     required int roomId,
@@ -187,9 +199,7 @@ Future<http.Response> markAsRead({
     return post(
       url: "chat/markAsRead",
       token: token,
-      body: {
-        "user_id": userId,
-        "room_id": roomId,
-      },
+      body: {"user_id": userId, "room_id": roomId},
     );
-  }}
+  }
+}

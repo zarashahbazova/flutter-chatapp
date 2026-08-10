@@ -78,7 +78,7 @@ class _SingleChatDialogState extends State<SingleChatDialog> {
               onChanged: performSearch,
               decoration: InputDecoration(
                 labelText: "Kullanıcı Adı veya İsim",
-                hintText: "Örn: ahmet123",
+                hintText: "Örn: kullanici123",
                 prefixIcon: const Icon(Icons.search_rounded),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),

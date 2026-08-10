@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:stajapp/themes/tema1.dart';
 import 'chats_page.dart';
 import 'discover_page.dart';
@@ -38,6 +39,7 @@ class _MessagesPageState extends State<MessagesPage> {
 
   List<Map<String, dynamic>> users = [];
   Timer? _pollingTimer;
+  StreamSubscription<RemoteMessage>? _fcmSubscription;
 
   @override
   void initState() {
@@ -57,15 +59,140 @@ class _MessagesPageState extends State<MessagesPage> {
         loadRooms(showLoading: false);
       }
     });
+
+    _setupGlobalFCMListener(); // Genel FCM Dinleyicisi
   }
 
   @override
   void dispose() {
+    _fcmSubscription?.cancel();
     _pollingTimer?.cancel();
     _scrollController.dispose();
     _searchController.dispose();
     _pageController.dispose();
     super.dispose();
+  }
+
+  // üstten gelen bildirim
+  void _showTopNotification({required String title, required String body, dynamic roomId}) {
+    late OverlayEntry overlayEntry;
+
+    overlayEntry = OverlayEntry(
+      builder: (context) {
+        final surfaceColor = Theme.of(context).colorScheme.surface;
+        final onSurfaceColor = Theme.of(context).colorScheme.onSurface;
+
+        return Positioned(
+          top: MediaQuery.of(context).padding.top + 10,
+          left: 16,
+          right: 16,
+          child: Material(
+            color: Colors.transparent,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(20),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: surfaceColor.withAlpha(210), // Şeffaf zemin
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: AppTheme.primaryNavy.withAlpha(40),
+                      width: 1,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withAlpha(30),
+                        blurRadius: 16,
+                        offset: const Offset(0, 6),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 40,
+                        height: 40,
+                        decoration: const BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: AppTheme.primaryNavy,
+                        ),
+                        child: const Icon(
+                          Icons.chat_bubble_outline_rounded,
+                          color: Colors.white,
+                          size: 20,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              title,
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: onSurfaceColor,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              body,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: onSurfaceColor.withAlpha(160),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+
+    Overlay.of(context).insert(overlayEntry);
+
+    // üstteki bildirimi kaldır
+    Future.delayed(const Duration(seconds: 3), () {
+      if (overlayEntry.mounted) {
+        overlayEntry.remove();
+      }
+    });
+  }
+
+  // fcm listener
+  void _setupGlobalFCMListener() {
+    _fcmSubscription = FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+      if (!mounted) return;
+
+      final data = message.data;
+      final String? incomingSenderId = (data['sender_id'] ?? data['senderId'] ?? data['sender'])?.toString();
+      final String incomingText = data['message'] ?? data['body'] ?? message.notification?.body ?? "";
+      final String title = message.notification?.title ?? "Yeni Mesaj";
+
+      // Kendi attığımız mesaj değilse ve uygulamadaysak üstten bildirim çıkar
+      if (incomingSenderId != currentUserId.toString()) {
+        _showTopNotification(
+          title: title,
+          body: incomingText,
+          roomId: data['room_id'],
+        );
+
+        // Sohbet listesini yenile
+        loadRooms(showLoading: false);
+      }
+    });
   }
 
   String _formatTime(dynamic timestamp) {
@@ -479,8 +606,6 @@ class _MessagesPageState extends State<MessagesPage> {
                         ),
                     ],
                   ),
-
-                  // Düzenlenen "+" Butonu (Hem Light hem Dark modda şık)
                   GestureDetector(
                     behavior: HitTestBehavior.opaque,
                     onTap: _openNewChatOptions,
@@ -506,8 +631,6 @@ class _MessagesPageState extends State<MessagesPage> {
               ),
             ),
             const SizedBox(height: 16),
-
-            // Düzenlenen Arama Kutusu (Dark Mod uyumlu)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 18),
               child: Container(

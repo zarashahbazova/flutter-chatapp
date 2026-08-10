@@ -164,7 +164,7 @@ class _GroupChatDialogState extends State<GroupChatDialog> {
                     onSubmitted: (value) => addUserToList(value),
                     decoration: InputDecoration(
                       labelText: "Katılımcı Ara / Yaz",
-                      hintText: "Örn: ahmet123",
+                      hintText: "Örn: kullanici123",
                       prefixIcon: const Icon(Icons.person_add_alt_1_rounded),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
