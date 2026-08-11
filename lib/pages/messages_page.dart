@@ -24,7 +24,7 @@ class MessagesPage extends StatefulWidget {
 
 class _MessagesPageState extends State<MessagesPage> {
   final ApiClient api = ApiClient();
-
+  String _selectedFilter = "Tümü"; // "Tümü", "Okunmamış", "Gruplar"
   String? token;
   int? currentUserId;
   int _selectedIndex = 0;
@@ -73,7 +73,11 @@ class _MessagesPageState extends State<MessagesPage> {
     super.dispose();
   }
 
-  void _showTopNotification({required String title, required String body, dynamic roomId}) {
+  void _showTopNotification({
+    required String title,
+    required String body,
+    dynamic roomId,
+  }) {
     late OverlayEntry overlayEntry;
 
     overlayEntry = OverlayEntry(
@@ -92,7 +96,10 @@ class _MessagesPageState extends State<MessagesPage> {
               child: BackdropFilter(
                 filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
                   decoration: BoxDecoration(
                     color: surfaceColor.withAlpha(210),
                     borderRadius: BorderRadius.circular(20),
@@ -170,12 +177,16 @@ class _MessagesPageState extends State<MessagesPage> {
   }
 
   void _setupGlobalFCMListener() {
-    _fcmSubscription = FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+    _fcmSubscription = FirebaseMessaging.onMessage.listen((
+      RemoteMessage message,
+    ) {
       if (!mounted) return;
 
       final data = message.data;
-      final String? incomingSenderId = (data['sender_id'] ?? data['senderId'] ?? data['sender'])?.toString();
-      final String incomingText = data['message'] ?? data['body'] ?? message.notification?.body ?? "";
+      final String? incomingSenderId =
+          (data['sender_id'] ?? data['senderId'] ?? data['sender'])?.toString();
+      final String incomingText =
+          data['message'] ?? data['body'] ?? message.notification?.body ?? "";
       final String title = message.notification?.title ?? "Yeni Mesaj";
 
       if (incomingSenderId != currentUserId.toString()) {
@@ -243,8 +254,14 @@ class _MessagesPageState extends State<MessagesPage> {
               unreadVal = int.tryParse(room["unread_count"].toString()) ?? 0;
             }
 
+            int parsedAdminId = 0;
+            if (room["admin_id"] != null) {
+              parsedAdminId = int.tryParse(room["admin_id"].toString()) ?? 0;
+            }
+
             return {
               "room_id": room["room_id"],
+              "admin_id": parsedAdminId, // 👈 Backend'den gelen admin_id alındı
               "other_user_id": room["other_user_id"],
               "is_group": room["is_group"] ?? false,
               "participants": room["participants"] ?? [],
@@ -316,6 +333,7 @@ class _MessagesPageState extends State<MessagesPage> {
                 userName: displayName,
                 roomId: roomId,
                 isGroup: false,
+                adminId: 0, // 👈 Özel sohbetlerde admin id gerekmediği için 0 verildi
                 participants: null,
                 userPhotoUrl: profilePhoto,
               ),
@@ -325,11 +343,7 @@ class _MessagesPageState extends State<MessagesPage> {
       }
     } catch (e) {
       if (!mounted) return;
-      AppTheme.showSnackBar(
-        context,
-        message: "Hata oluştu: $e",
-        isError: true,
-      );
+      AppTheme.showSnackBar(context, message: "Hata oluştu: $e", isError: true);
     }
   }
 
@@ -370,6 +384,7 @@ class _MessagesPageState extends State<MessagesPage> {
                 userName: groupName,
                 roomId: roomId,
                 isGroup: true,
+                adminId: currentUserId!, // 👈 Grubu ben oluşturduğum için adminId benim ID'm
                 participants: null,
                 userPhotoUrl: null,
               ),
@@ -379,11 +394,7 @@ class _MessagesPageState extends State<MessagesPage> {
       }
     } catch (e) {
       if (!mounted) return;
-      AppTheme.showSnackBar(
-        context,
-        message: "Hata oluştu: $e",
-        isError: true,
-      );
+      AppTheme.showSnackBar(context, message: "Hata oluştu: $e", isError: true);
     }
   }
 
@@ -443,6 +454,7 @@ class _MessagesPageState extends State<MessagesPage> {
           userName: user["name"],
           roomId: user["room_id"],
           isGroup: user["is_group"] ?? false,
+          adminId: user["admin_id"] ?? 0, // 👈 Odanın admin_id bilgisi iletiliyor
           participants: user["participants"],
           userPhotoUrl: user["display_photo"],
         ),
@@ -500,10 +512,14 @@ class _MessagesPageState extends State<MessagesPage> {
                         top: MediaQuery.of(context).padding.top,
                       ),
                       decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.surface.withAlpha(200),
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.surface.withAlpha(200),
                         border: Border(
                           bottom: BorderSide(
-                            color: Theme.of(context).colorScheme.onSurface.withAlpha(20),
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurface.withAlpha(20),
                             width: 0.8,
                           ),
                         ),
@@ -546,9 +562,18 @@ class _MessagesPageState extends State<MessagesPage> {
     switch (_selectedIndex) {
       case 0:
         final filteredUsers = users.where((user) {
-          return user["name"].toString().toLowerCase().contains(
+          final matchesSearch = user["name"].toString().toLowerCase().contains(
             _searchText.toLowerCase(),
           );
+
+          bool matchesFilter = true;
+          if (_selectedFilter == "Okunmamış") {
+            matchesFilter = (user["unread"] as int? ?? 0) > 0;
+          } else if (_selectedFilter == "Gruplar") {
+            matchesFilter = user["is_group"] == true;
+          }
+
+          return matchesSearch && matchesFilter;
         }).toList();
 
         final totalUnread = users.fold<int>(
@@ -700,7 +725,55 @@ class _MessagesPageState extends State<MessagesPage> {
                 ),
               ),
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 12),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              physics: const BouncingScrollPhysics(),
+              padding: const EdgeInsets.symmetric(horizontal: 18),
+              child: Row(
+                children: ["Tümü", "Okunmamış", "Gruplar"].map((filter) {
+                  final bool isSelected = _selectedFilter == filter;
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: GestureDetector(
+                      onTap: () => setState(() => _selectedFilter = filter),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 7,
+                        ),
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? primaryColor
+                              : surfaceColor.withAlpha(200),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: isSelected
+                                ? primaryColor
+                                : onSurfaceColor.withAlpha(25),
+                            width: 1,
+                          ),
+                        ),
+                        child: Text(
+                          filter,
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: isSelected
+                                ? FontWeight.w700
+                                : FontWeight.w500,
+                            color: isSelected
+                                ? Colors.white
+                                : onSurfaceColor.withAlpha(180),
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+            const SizedBox(height: 10),
             if (filteredUsers.isEmpty)
               Padding(
                 padding: const EdgeInsets.only(top: 40),

@@ -6,21 +6,27 @@ import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:stajapp/pages/group_detail_page.dart';
 import 'package:stajapp/themes/tema1.dart';
+import 'package:stajapp/widgets/dialogs/user_profile_dialog.dart';
 import '../services/api_client.dart';
 
 class ChatsPage extends StatefulWidget {
   final String userName;
   final int roomId;
   final String? userPhotoUrl;
+  final bool isGroup;
+  final dynamic participants;
+  final int adminId; // Grubu kuran kişinin ID'si
 
   const ChatsPage({
     super.key,
     required this.userName,
     required this.roomId,
     this.userPhotoUrl,
-    required isGroup,
-    required participants,
+    this.isGroup = false,
+    this.participants,
+    required this.adminId,
   });
 
   @override
@@ -227,6 +233,45 @@ class _ChatsPageState extends State<ChatsPage> {
         overlayEntry.remove();
       }
     });
+  }
+
+  // --- GRUP DETAY SAYFASINA YÖNLENDİRME (DÜZELTİLDİ) ---
+  // --- HEADER TIKLANDIĞINDA (Grup Detay / Bireysel Profil) ---
+  void _navigateToGroupDetail() {
+    if (widget.isGroup) {
+      // 1. GRUP SOHBETİ İSE: Grup Detay Sayfasına Yönlendir
+      if (widget.participants == null || token == null || currentUserId == null)
+        return;
+
+      final List participantsList = widget.participants as List;
+
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => GroupDetailPage(
+            roomName: widget.userName,
+            roomId: widget.roomId,
+            groupPhotoUrl: widget.userPhotoUrl,
+            adminId: widget.adminId,
+            currentUserId: currentUserId!,
+            participants: participantsList,
+            token: token!,
+          ),
+        ),
+      ).then((_) => loadMessages());
+    } else {
+      // 2. BİREYSEL SOHBET İSE: Profil Kartı Aç
+      showDialog(
+        context: context,
+        builder: (_) => UserProfileDialog(
+          user: {
+            "full_name": widget.userName,
+            "user_name": widget.userName,
+            "profile_photo": widget.userPhotoUrl,
+          },
+        ),
+      );
+    }
   }
 
   String _formatTime(dynamic timestamp) {
@@ -565,79 +610,103 @@ class _ChatsPageState extends State<ChatsPage> {
                     ),
                     onPressed: () => Navigator.pop(context),
                   ),
-                  title: Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Center(
-                        child: SizedBox(
-                          width: 42,
-                          height: 42,
-                          child: Stack(
-                            children: [
-                              Container(
-                                width: 42,
-                                height: 42,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  gradient: fullHeaderPhotoUrl == null
-                                      ? const LinearGradient(
-                                          colors: [
-                                            AppTheme.primaryNavy,
-                                            AppTheme.secondaryNavy,
-                                          ],
-                                          begin: Alignment.topLeft,
-                                          end: Alignment.bottomRight,
-                                        )
-                                      : null,
-                                ),
-                                alignment: Alignment.center,
-                                child: fullHeaderPhotoUrl != null
-                                    ? ClipOval(
-                                        child: Image.network(
-                                          fullHeaderPhotoUrl,
-                                          width: 42,
-                                          height: 42,
-                                          fit: BoxFit.cover,
-                                          errorBuilder: (_, __, ___) => Text(
-                                            firstLetter,
-                                            style: const TextStyle(
-                                              fontSize: 17,
-                                              fontWeight: FontWeight.bold,
-                                              color: Colors.white,
+                  title: GestureDetector(
+                    onTap: _navigateToGroupDetail,
+                    behavior: HitTestBehavior.opaque,
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Center(
+                          child: SizedBox(
+                            width: 42,
+                            height: 42,
+                            child: Stack(
+                              children: [
+                                Container(
+                                  width: 42,
+                                  height: 42,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    gradient: fullHeaderPhotoUrl == null
+                                        ? const LinearGradient(
+                                            colors: [
+                                              AppTheme.primaryNavy,
+                                              AppTheme.secondaryNavy,
+                                            ],
+                                            begin: Alignment.topLeft,
+                                            end: Alignment.bottomRight,
+                                          )
+                                        : null,
+                                  ),
+                                  alignment: Alignment.center,
+                                  child: fullHeaderPhotoUrl != null
+                                      ? ClipOval(
+                                          child: Image.network(
+                                            fullHeaderPhotoUrl,
+                                            width: 42,
+                                            height: 42,
+                                            fit: BoxFit.cover,
+                                            errorBuilder: (_, __, ___) => Text(
+                                              firstLetter,
+                                              style: const TextStyle(
+                                                fontSize: 17,
+                                                fontWeight: FontWeight.bold,
+                                                color: Colors.white,
+                                              ),
                                             ),
                                           ),
+                                        )
+                                      : Text(
+                                          firstLetter,
+                                          style: const TextStyle(
+                                            fontSize: 17,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.white,
+                                          ),
                                         ),
-                                      )
-                                    : Text(
-                                        firstLetter,
-                                        style: const TextStyle(
-                                          fontSize: 17,
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.white,
-                                        ),
-                                      ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                widget.userName,
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w700,
+                                  color: onSurfaceColor,
+                                  letterSpacing: -0.3,
+                                ),
                               ),
+                              if (widget.isGroup &&
+                                  widget.participants != null) ...[
+                                const SizedBox(height: 2),
+                                Text(
+                                  (widget.participants as List)
+                                      .map(
+                                        (p) => p["user_name"] ?? p["full_name"],
+                                      )
+                                      .join(", "),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: onSurfaceColor.withAlpha(140),
+                                    fontWeight: FontWeight.w400,
+                                  ),
+                                ),
+                              ],
                             ],
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 12),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            widget.userName,
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w700,
-                              color: onSurfaceColor,
-                              letterSpacing: -0.3,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -707,8 +776,7 @@ class _ChatsPageState extends State<ChatsPage> {
                             ],
                           ),
                           child: Column(
-                            crossAxisAlignment: CrossAxisAlignment
-                                .end, // <-- KONTROL KUTUSUNU SAĞA HİZALADIK
+                            crossAxisAlignment: CrossAxisAlignment.end,
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               // --- 1. FOTOĞRAF VARSA GÖSTERİMİ ---
@@ -718,7 +786,6 @@ class _ChatsPageState extends State<ChatsPage> {
                                   child: Image.network(
                                     fullMsgImageUrl,
                                     fit: BoxFit.cover,
-
                                     frameBuilder:
                                         (
                                           context,
@@ -735,16 +802,13 @@ class _ChatsPageState extends State<ChatsPage> {
                                                   }
                                                 });
                                           }
-
                                           return child;
                                         },
-
                                     loadingBuilder:
                                         (context, child, loadingProgress) {
                                           if (loadingProgress == null) {
                                             return child;
                                           }
-
                                           return const Padding(
                                             padding: EdgeInsets.all(20.0),
                                             child: CircularProgressIndicator(
@@ -752,7 +816,6 @@ class _ChatsPageState extends State<ChatsPage> {
                                             ),
                                           );
                                         },
-
                                     errorBuilder: (context, error, stackTrace) {
                                       return const Row(
                                         mainAxisSize: MainAxisSize.min,
@@ -780,8 +843,7 @@ class _ChatsPageState extends State<ChatsPage> {
                               // --- 2. MESAJ METNİ VE SAAT HİZALAMASI ---
                               Row(
                                 mainAxisSize: MainAxisSize.min,
-                                mainAxisAlignment:
-                                    MainAxisAlignment.end, // <-- SAĞA YASLAMA
+                                mainAxisAlignment: MainAxisAlignment.end,
                                 crossAxisAlignment: CrossAxisAlignment.end,
                                 children: [
                                   if (message["message"] != null &&

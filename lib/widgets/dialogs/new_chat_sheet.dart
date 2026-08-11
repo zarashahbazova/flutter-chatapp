@@ -30,10 +30,10 @@ class NewChatSheet extends StatelessWidget {
             const SizedBox(height: 16),
             ListTile(
               leading: CircleAvatar(
-                backgroundColor: AppTheme.primaryNavy.withAlpha(15),
+                backgroundColor: const Color.fromARGB(255, 141, 138, 145).withAlpha(15),
                 child: const Icon(
                   Icons.person_add_rounded,
-                  color: AppTheme.primaryNavy,
+                  color: AppTheme.darkpurple2,
                 ),
               ),
               title: const Text(
@@ -51,8 +51,8 @@ class NewChatSheet extends StatelessWidget {
             const Divider(),
             ListTile(
               leading: CircleAvatar(
-                backgroundColor: AppTheme.primaryNavy.withAlpha(15),
-                child: const Icon(Icons.groups_rounded, color: AppTheme.primaryNavy),
+                backgroundColor: const Color.fromARGB(255, 141, 138, 145).withAlpha(15),
+                child: const Icon(Icons.groups_rounded, color: AppTheme.darkpurple2),
               ),
               title: const Text(
                 "Yeni Grup Oluştur",

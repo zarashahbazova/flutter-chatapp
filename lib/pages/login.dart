@@ -80,10 +80,6 @@ class _LoginPageState extends State<LoginPage> {
         await prefs.setString("fullName", user["full_name"]);
         await prefs.setString("email", user["email"]);
 
-        // --------------------------------------------------
-        // FCM TOKEN
-        // --------------------------------------------------
-        // FCM çalışmasa bile LOGIN BAŞARISIZ OLMAYACAK.
         try {
           String? fcmToken;
 
@@ -108,10 +104,7 @@ class _LoginPageState extends State<LoginPage> {
           // FCM problemi login'i engellemeyecek.
           print("FCM token alınamadı: $e");
         }
-
-        // --------------------------------------------------
-        // LOGIN BAŞARILI
-        // --------------------------------------------------
+        
 
         if (!mounted) return;
 

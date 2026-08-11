@@ -2,13 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class ApiClient {
-  // ---------------------------------------------------------------------------
-  // IP ADRESİ BİLGİSİ:
-  // - Fiziki Android Telefon: Bilgisayarınızın Wi-Fi IP'si (Örn: http://192.168.60.34:3000)
-  // - Android Emulator: http://10.0.2.2:3000
-  // - iOS Simulator: http://localhost:3000
-  // ---------------------------------------------------------------------------
-  static const String baseUrl = "http://192.168.60.34:3000";
+  static const String baseUrl = "http://192.168.60.48:3000";
 
   Future<http.Response> post({
     required String url,
@@ -206,7 +200,8 @@ class ApiClient {
       body: {"user_id": userId, "room_id": roomId},
     );
   }
-  // CHAT - GÖRSEL MESAJ GÖNDERME
+
+//fotolu mesaj
 Future<http.Response> sendImageMessage({
   required String token,
   required int senderId,
@@ -228,5 +223,85 @@ Future<http.Response> sendImageMessage({
 
   var streamedResponse = await request.send();
   return await http.Response.fromStream(streamedResponse);
+}
+
+// grup bilgilerini güncelleme
+Future<http.Response> editGroup({
+  required String token,
+  required int roomId,
+  required int adminId,
+  required String roomName,
+  String? roomDesc,
+}) async {
+  return await put(
+    url: 'chat/edit-group',
+    token: token,
+    body: {
+      'room_id': roomId,
+      'admin_id': adminId,
+      'room_name': roomName,
+      'room_desc': roomDesc ?? '', // Backend'in beklediği parametre adı
+    },
+  );
+}
+// grup fotosu düzenleme
+Future<http.StreamedResponse> editGroupImage({
+  required String token,
+  required int roomId,
+  required int adminId,
+  required String filePath,
+}) async {
+  final url = Uri.parse('$baseUrl/chat/edit-group-image');
+  var request = http.MultipartRequest('PUT', url)
+    ..headers['Authorization'] = 'Bearer $token'
+    ..fields['room_id'] = roomId.toString()
+    ..fields['admin_id'] = adminId.toString()
+    ..files.add(await http.MultipartFile.fromPath('image', filePath)); // Backend field adı: 'image'
+
+  return await request.send();
+}
+// gruba üye ekleme
+// Gruba Üye Ekleme Metodu
+Future<http.Response> addGroupParticipant({
+  required String token,
+  required int roomId,
+  required int adminId,
+  required String username,
+}) async {
+  final url = Uri.parse('$baseUrl/chat/add-participant');
+  return await http.post(
+    url,
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $token',
+    },
+    body: jsonEncode({
+      'room_id': roomId,
+      'admin_id': adminId,
+      'username': username,
+    }),
+  );
+}
+// 3. Grup Üyelerini Çıkarma
+// Gruptan Üye Çıkarma Metodu (Sadece tekil int participantId alır)
+Future<http.Response> editGroupMembers({
+  required String token,
+  required int roomId,
+  required int adminId,
+  required int participantId, // 👈 Array [int] değil, doğrudan int
+}) async {
+  final url = Uri.parse('$baseUrl/chat/edit-group-members');
+  return await http.put(
+    url,
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $token',
+    },
+    body: jsonEncode({
+      'room_id': roomId,
+      'admin_id': adminId,
+      'participant_id': participantId, // 👈 Backend'in beklediği integer
+    }),
+  );
 }
 }

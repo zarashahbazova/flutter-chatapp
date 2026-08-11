@@ -5,7 +5,7 @@ class CustomGlassNavBar extends StatelessWidget {
   final int selectedIndex;
   final double currentPage;
   final PageController pageController;
-  final Function(int index) onPageSelected;
+  final Function(int index) onPageSelected; 
   final Function(double page) onPageDragged;
 
   const CustomGlassNavBar({
@@ -38,7 +38,7 @@ class CustomGlassNavBar extends StatelessWidget {
           ),
         ],
       ),
-      child: ClipRRect(
+      child: ClipRRect( 
         borderRadius: BorderRadius.circular(40),
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 4, sigmaY: 4),
@@ -54,7 +54,7 @@ class CustomGlassNavBar extends StatelessWidget {
             ),
             child: LayoutBuilder(
               builder: (context, constraints) {
-                final totalWidth = constraints.maxWidth;
+                final totalWidth = constraints.maxWidth; //toplam genislik
                 final itemWidth = totalWidth / navItems.length;
 
                 return GestureDetector(
@@ -62,13 +62,13 @@ class CustomGlassNavBar extends StatelessWidget {
                     double targetPage = (details.localPosition.dx / itemWidth)
                         .clamp(0.0, (navItems.length - 1).toDouble());
                     onPageDragged(targetPage);
-                    if (pageController.hasClients) {
+                    if (pageController.hasClients) { //konuma bağlı mı
                       pageController.jumpTo(
                         targetPage * pageController.position.viewportDimension,
                       );
                     }
                   },
-                  onHorizontalDragEnd: (details) {
+                  onHorizontalDragEnd: (details) { //yuvarla
                     int targetIndex = currentPage.round().clamp(
                       0,
                       navItems.length - 1,
@@ -82,7 +82,7 @@ class CustomGlassNavBar extends StatelessWidget {
                   },
                   child: Stack(
                     children: [
-                      Positioned(
+                      Positioned( 
                         left: (currentPage * itemWidth).clamp(
                           0.0,
                           totalWidth - itemWidth,
@@ -92,7 +92,7 @@ class CustomGlassNavBar extends StatelessWidget {
                         bottom: 0,
                         child: Container(
                           decoration: BoxDecoration(
-                            color: const Color.fromARGB(255, 35, 25, 63).withAlpha(240),
+                            color: const Color.fromARGB(240, 35, 25, 63),
                             borderRadius: BorderRadius.circular(32),
                           ),
                         ),
@@ -110,7 +110,7 @@ class CustomGlassNavBar extends StatelessWidget {
                             selectionRatio,
                           )!;
 
-                          return Expanded(
+                          return Expanded( // eşit paylasim
                             child: GestureDetector(
                               behavior: HitTestBehavior.opaque,
                               onTap: () {
