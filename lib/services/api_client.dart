@@ -39,23 +39,6 @@ class ApiClient {
     );
   }
 
-  // PROFİL FOTOĞRAFI YÜKLEME (MULTIPART)
-  Future<http.Response> updateProfilePhoto({
-    required String token,
-    required String filePath,
-  }) async {
-    final uri = Uri.parse("$baseUrl/auth/profile/photo");
-    var request = http.MultipartRequest("PUT", uri);
-
-    request.headers["Authorization"] = "Bearer $token";
-
-    // Backend'in Multer ayarında 'photo' ismiyle dosya beklenmektedir[cite: 12]
-    request.files.add(await http.MultipartFile.fromPath('photo', filePath));
-
-    var streamedResponse = await request.send();
-    return await http.Response.fromStream(streamedResponse);
-  }
-
   Future<http.Response> put({
     required String url,
     required Map<String, dynamic> body,
@@ -69,6 +52,21 @@ class ApiClient {
       },
       body: jsonEncode(body),
     );
+  }
+
+  // PROFİL FOTOĞRAFI YÜKLEME (MULTIPART)
+  Future<http.Response> updateProfilePhoto({
+    required String token,
+    required String filePath,
+  }) async {
+    final uri = Uri.parse("$baseUrl/auth/profile/photo");
+    var request = http.MultipartRequest("PUT", uri);
+
+    request.headers["Authorization"] = "Bearer $token";
+    request.files.add(await http.MultipartFile.fromPath('photo', filePath));
+
+    var streamedResponse = await request.send();
+    return await http.Response.fromStream(streamedResponse);
   }
 
   // AUTH ENDPOINTS
@@ -201,107 +199,116 @@ class ApiClient {
     );
   }
 
-//fotolu mesaj
-Future<http.Response> sendImageMessage({
-  required String token,
-  required int senderId,
-  required int roomId,
-  required String filePath,
-  String? message,
-}) async {
-  final uri = Uri.parse("$baseUrl/chat/message");
-  var request = http.MultipartRequest("POST", uri);
+  // FOTOĞRAFLI MESAJ GÖNDERME
+  Future<http.Response> sendImageMessage({
+    required String token,
+    required int senderId,
+    required int roomId,
+    required String filePath,
+    String? message,
+  }) async {
+    final uri = Uri.parse("$baseUrl/chat/message");
+    var request = http.MultipartRequest("POST", uri);
 
-  request.headers["Authorization"] = "Bearer $token";
-  request.fields["sender_id"] = senderId.toString();
-  request.fields["room_id"] = roomId.toString();
-  if (message != null && message.isNotEmpty) {
-    request.fields["message"] = message;
+    request.headers["Authorization"] = "Bearer $token";
+    request.fields["sender_id"] = senderId.toString();
+    request.fields["room_id"] = roomId.toString();
+    if (message != null && message.isNotEmpty) {
+      request.fields["message"] = message;
+    }
+
+    request.files.add(await http.MultipartFile.fromPath('image', filePath));
+
+    var streamedResponse = await request.send();
+    return await http.Response.fromStream(streamedResponse);
   }
 
-  request.files.add(await http.MultipartFile.fromPath('image', filePath));
+  // GRUP BİLGİLERİNİ GÜNCELLEME
+  Future<http.Response> editGroup({
+    required String token,
+    required int roomId,
+    required int adminId,
+    required String roomName,
+    String? roomDesc,
+  }) async {
+    return await put(
+      url: 'chat/edit-group',
+      token: token,
+      body: {
+        'room_id': roomId,
+        'admin_id': adminId,
+        'room_name': roomName,
+        'room_desc': roomDesc ?? '',
+      },
+    );
+  }
 
-  var streamedResponse = await request.send();
-  return await http.Response.fromStream(streamedResponse);
-}
+  // GRUP FOTOĞRAFI DÜZENLEME
+  Future<http.StreamedResponse> editGroupImage({
+    required String token,
+    required int roomId,
+    required int adminId,
+    required String filePath,
+  }) async {
+    final url = Uri.parse('$baseUrl/chat/edit-group-image');
+    var request = http.MultipartRequest('PUT', url)
+      ..headers['Authorization'] = 'Bearer $token'
+      ..fields['room_id'] = roomId.toString()
+      ..fields['admin_id'] = adminId.toString()
+      ..files.add(await http.MultipartFile.fromPath('image', filePath));
 
-// grup bilgilerini güncelleme
-Future<http.Response> editGroup({
-  required String token,
-  required int roomId,
-  required int adminId,
-  required String roomName,
-  String? roomDesc,
-}) async {
-  return await put(
-    url: 'chat/edit-group',
-    token: token,
-    body: {
-      'room_id': roomId,
-      'admin_id': adminId,
-      'room_name': roomName,
-      'room_desc': roomDesc ?? '', // Backend'in beklediği parametre adı
-    },
-  );
-}
-// grup fotosu düzenleme
-Future<http.StreamedResponse> editGroupImage({
-  required String token,
-  required int roomId,
-  required int adminId,
-  required String filePath,
-}) async {
-  final url = Uri.parse('$baseUrl/chat/edit-group-image');
-  var request = http.MultipartRequest('PUT', url)
-    ..headers['Authorization'] = 'Bearer $token'
-    ..fields['room_id'] = roomId.toString()
-    ..fields['admin_id'] = adminId.toString()
-    ..files.add(await http.MultipartFile.fromPath('image', filePath)); // Backend field adı: 'image'
+    return await request.send();
+  }
 
-  return await request.send();
-}
-// gruba üye ekleme
-// Gruba Üye Ekleme Metodu
-Future<http.Response> addGroupParticipant({
-  required String token,
-  required int roomId,
-  required int adminId,
-  required String username,
-}) async {
-  final url = Uri.parse('$baseUrl/chat/add-participant');
-  return await http.post(
-    url,
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': 'Bearer $token',
-    },
-    body: jsonEncode({
-      'room_id': roomId,
-      'admin_id': adminId,
-      'username': username,
-    }),
-  );
-}
-// 3. Grup Üyelerini Çıkarma
-// Gruptan Üye Çıkarma Metodu (Sadece tekil int participantId alır)
-Future<http.Response> editGroupMembers({
-  required String token,
-  required int roomId,
-  required int adminId,
-  required int participantId, // 👈 Array [int] değil, doğrudan int
-}) async {
-  final url = Uri.parse('$baseUrl/chat/edit-group-members');
-  return await http.put(
-    url,
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': 'Bearer $token',
-    },
-    body: jsonEncode({
-      'room_id': roomId,
-      'admin_id': adminId,
-      'participant_id': participantId, // 👈 Backend'in beklediği integer
-    }),
-  );
-}
+  // GRUBA ÜYE EKLEME METODU (DÜZELTİLDİ: post YARDIMCI METODU KULLANILIYOR)
+  Future<http.Response> addGroupParticipant({
+    required String token,
+    required int roomId,
+    required int adminId,
+    required String username,
+  }) async {
+    return await post(
+      url: 'chat/add-participant',
+      token: token,
+      body: {
+        'room_id': roomId,
+        'admin_id': adminId,
+        'username': username,
+      },
+    );
+  }
+
+  // GRUPTAN AYRILMA METODU
+  Future<http.Response> leaveGroup({
+    required String token,
+    required int roomId,
+    required int userId,
+  }) async {
+    return await put(
+      url: 'chat/leave-group',
+      token: token,
+      body: {
+        'room_id': roomId,
+        'user_id': userId,
+      },
+    );
+  }
+
+  // GRUP ÜYESİ ÇIKARMA METODU (DÜZELTİLDİ: put YARDIMCI METODU KULLANILIYOR)
+  Future<http.Response> editGroupMembers({
+    required String token,
+    required int roomId,
+    required int adminId,
+    required int participantId,
+  }) async {
+    return await put(
+      url: 'chat/edit-group-members',
+      token: token,
+      body: {
+        'room_id': roomId,
+        'admin_id': adminId,
+        'participant_id': participantId,
+      },
+    );
+  }
 }

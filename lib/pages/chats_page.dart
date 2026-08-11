@@ -15,6 +15,7 @@ class ChatsPage extends StatefulWidget {
   final String userName;
   final int roomId;
   final String? userPhotoUrl;
+  final String? roomDesc;
   final bool isGroup;
   final dynamic participants;
   final int adminId; // Grubu kuran kişinin ID'si
@@ -22,6 +23,7 @@ class ChatsPage extends StatefulWidget {
   const ChatsPage({
     super.key,
     required this.userName,
+    this.roomDesc,
     required this.roomId,
     this.userPhotoUrl,
     this.isGroup = false,
@@ -237,9 +239,9 @@ class _ChatsPageState extends State<ChatsPage> {
 
   // --- GRUP DETAY SAYFASINA YÖNLENDİRME (DÜZELTİLDİ) ---
   // --- HEADER TIKLANDIĞINDA (Grup Detay / Bireysel Profil) ---
+  // --- HEADER TIKLANDIĞINDA (Grup Detay / Bireysel Profil) ---
   void _navigateToGroupDetail() {
     if (widget.isGroup) {
-      // 1. GRUP SOHBETİ İSE: Grup Detay Sayfasına Yönlendir
       if (widget.participants == null || token == null || currentUserId == null)
         return;
 
@@ -250,6 +252,8 @@ class _ChatsPageState extends State<ChatsPage> {
         MaterialPageRoute(
           builder: (_) => GroupDetailPage(
             roomName: widget.userName,
+            roomDesc:
+                widget.roomDesc, // 👈 BURAYA DİKKAT: AÇIKLAMAYI AKTARIYORUZ
             roomId: widget.roomId,
             groupPhotoUrl: widget.userPhotoUrl,
             adminId: widget.adminId,
@@ -260,7 +264,6 @@ class _ChatsPageState extends State<ChatsPage> {
         ),
       ).then((_) => loadMessages());
     } else {
-      // 2. BİREYSEL SOHBET İSE: Profil Kartı Aç
       showDialog(
         context: context,
         builder: (_) => UserProfileDialog(

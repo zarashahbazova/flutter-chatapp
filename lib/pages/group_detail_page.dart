@@ -51,6 +51,50 @@ class _GroupDetailPageState extends State<GroupDetailPage> {
     currentRoomDesc = widget.roomDesc ?? "Açıklama eklenmemiş.";
     currentGroupPhotoUrl = widget.groupPhotoUrl;
     currentParticipants = List.from(widget.participants);
+
+    // 👈 Sayfa açılır açılmaz veritabanından güncel açıklamayı çekiyoruz
+    _fetchRoomDetails();
+  }
+
+  Future<void> _fetchRoomDetails() async {
+    try {
+      final response = await api.rooms(
+        token: widget.token,
+        userId: widget.currentUserId,
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final List rooms = data["data"]["rooms"] ?? [];
+
+        final currentRoom = rooms.firstWhere(
+          (r) => r["room_id"] == widget.roomId,
+          orElse: () => null,
+        );
+
+        if (currentRoom != null && mounted) {
+          setState(() {
+            final desc = currentRoom["display_description"];
+            currentRoomDesc =
+                (desc != null && desc.toString().trim().isNotEmpty)
+                ? desc.toString().trim()
+                : "Açıklama eklenmemiş.";
+
+            if (currentRoom["display_name"] != null) {
+              currentRoomName = currentRoom["display_name"];
+            }
+            if (currentRoom["display_photo"] != null) {
+              currentGroupPhotoUrl = currentRoom["display_photo"];
+            }
+            if (currentRoom["participants"] != null) {
+              currentParticipants = currentRoom["participants"];
+            }
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint("Oda detayları yüklenirken hata: $e");
+    }
   }
 
   // --- GRUP FOTOĞRAFI YÜKLEME ---
@@ -319,29 +363,32 @@ class _GroupDetailPageState extends State<GroupDetailPage> {
               onPressed: () async {
                 Navigator.pop(dialogContext);
                 try {
-                  final res = await api.post(
-                    url: 'chat/leave-group',
+                  final res = await api.leaveGroup(
                     token: widget.token,
-                    body: {
-                      "user_id": widget.currentUserId,
-                      "room_id": widget.roomId,
-                    },
+                    roomId: widget.roomId,
+                    userId: widget.currentUserId,
                   );
 
                   if (res.statusCode == 200 && mounted) {
-                    Navigator.pop(context);
-                    Navigator.pop(context);
+                    Navigator.pop(context); // Grup detayını kapat
+                    Navigator.pop(context); // Chat sayfasından çık
                     AppTheme.showSnackBar(
                       context,
                       message: "Gruptan ayrıldınız.",
                       isError: false,
                     );
                   } else {
-                    final data = jsonDecode(res.body);
+                    String errorMsg =
+                        "Gruptan ayrılamadınız (${res.statusCode}).";
+                    try {
+                      final data = jsonDecode(res.body);
+                      if (data["error"] != null) errorMsg = data["error"];
+                    } catch (_) {}
+
                     if (mounted) {
                       AppTheme.showSnackBar(
                         context,
-                        message: data["error"] ?? "Gruptan ayrılamadınız.",
+                        message: errorMsg,
                         isError: true,
                       );
                     }
@@ -364,10 +411,11 @@ class _GroupDetailPageState extends State<GroupDetailPage> {
     );
   }
 
-  // --- CANLI ARAMALI KATILIMCI EKLEME DIALOG'U ---
+  // --- CANLI ARAMALI KATILIMCI EKLEME DIALOG'U (GroupChatDialog Mantığıyla Birebir Aynı) ---
   void _showAddParticipantDialog() {
     if (!isAdmin) return;
 
+    final TextEditingController searchController = TextEditingController();
     List<Map<String, dynamic>> selectedUsers = [];
     List<Map<String, dynamic>> searchSuggestions = [];
     bool isSearching = false;
@@ -426,6 +474,7 @@ class _GroupDetailPageState extends State<GroupDetailPage> {
               if (!alreadySelected && context.mounted) {
                 setDialogState(() {
                   selectedUsers.add(user);
+                  searchController.clear();
                   searchSuggestions = [];
                 });
               }
@@ -496,15 +545,22 @@ class _GroupDetailPageState extends State<GroupDetailPage> {
                       ),
                       const SizedBox(height: 12),
                     ],
-                    TextField(
-                      onChanged: performSearch,
-                      decoration: InputDecoration(
-                        labelText: "Katılımcı Ara",
-                        prefixIcon: const Icon(Icons.search_rounded),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: searchController,
+                            onChanged: performSearch,
+                            decoration: InputDecoration(
+                              labelText: "Katılımcı Ara",
+                              prefixIcon: const Icon(Icons.search_rounded),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                          ),
                         ),
-                      ),
+                      ],
                     ),
                     if (isSearching)
                       const Padding(
@@ -523,9 +579,27 @@ class _GroupDetailPageState extends State<GroupDetailPage> {
                           mainAxisSize: MainAxisSize.min,
                           children: searchSuggestions.map((user) {
                             final username = user["user_name"].toString();
+                            final bool isAdded = selectedUsers.any(
+                              (u) => u["id"] == user["id"],
+                            );
+
                             return ListTile(
-                              title: Text(user["full_name"] ?? username),
+                              dense: true,
+                              title: Text(
+                                user["full_name"] ?? username,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
                               subtitle: Text("@$username"),
+                              trailing: Icon(
+                                isAdded
+                                    ? Icons.check_circle_rounded
+                                    : Icons.add_circle_outline_rounded,
+                                color: isAdded
+                                    ? Colors.green
+                                    : AppTheme.primaryNavy,
+                              ),
                               onTap: () => addUserToList(user),
                             );
                           }).toList(),
@@ -550,11 +624,11 @@ class _GroupDetailPageState extends State<GroupDetailPage> {
 
                     final List<Map<String, dynamic>> newlyAddedUsers =
                         List.from(selectedUsers);
-                    Navigator.pop(dialogContext); // Diyalog penceresini kapat
+
+                    Navigator.pop(dialogContext);
 
                     List<Map<String, dynamic>> addedSuccessfully = [];
 
-                    // Seçilen tüm kullanıcıları backend'in beklediği tekil formatta sırayla gönderiyoruz
                     for (var user in newlyAddedUsers) {
                       try {
                         final res = await api.addGroupParticipant(
@@ -565,7 +639,18 @@ class _GroupDetailPageState extends State<GroupDetailPage> {
                         );
 
                         if (res.statusCode == 200 || res.statusCode == 201) {
-                          addedSuccessfully.add(user);
+                          final resData = jsonDecode(res.body);
+                          // Backend'den eklenen kullanıcı objesi dönüyorsa al, dönmüyorsa eldeki user'ı formatla
+                          final Map<String, dynamic> addedUserObj =
+                              resData["data"]?["added_user"] ??
+                              {
+                                "id": user["id"],
+                                "user_name": user["user_name"],
+                                "full_name": user["full_name"],
+                                "profile_photo": user["profile_photo"],
+                                "birth_date": user["birth_date"],
+                              };
+                          addedSuccessfully.add(addedUserObj);
                         }
                       } catch (_) {}
                     }
@@ -576,14 +661,14 @@ class _GroupDetailPageState extends State<GroupDetailPage> {
                       });
 
                       AppTheme.showSnackBar(
-                        context,
+                        this.context,
                         message:
                             "${addedSuccessfully.length} kullanıcı gruba eklendi!",
                         isError: false,
                       );
                     } else if (mounted) {
                       AppTheme.showSnackBar(
-                        context,
+                        this.context,
                         message: "Kullanıcılar eklenemedi.",
                         isError: true,
                       );
@@ -760,12 +845,9 @@ class _GroupDetailPageState extends State<GroupDetailPage> {
               ),
             ),
 
-            const SizedBox(height: 12),
-
-            // 4. MEDYALAR & BAĞLANTILAR KARTI
             const SizedBox(height: 16),
 
-            // 5. YÖNETİCİ ÖZEL AKSİYONU: ÜYE EKLE (KART TASARIM)
+            // 5. YÖNETİCİ ÖZEL AKSİYONU: ÜYE EKLE
             if (isAdmin)
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -795,7 +877,7 @@ class _GroupDetailPageState extends State<GroupDetailPage> {
 
             const SizedBox(height: 20),
 
-            // 6. KATILIMCI LİSTESİ (ÖZEL KART İÇİNDE)
+            // 6. KATILIMCI LİSTESİ
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0),
               child: Container(
@@ -923,7 +1005,6 @@ class _GroupDetailPageState extends State<GroupDetailPage> {
                                   ),
                                 ),
 
-                              // --- 3 NOKTA POPUP MENÜSÜ ---
                               PopupMenuButton<String>(
                                 icon: Icon(
                                   Icons.more_vert_rounded,
@@ -1018,9 +1099,21 @@ class _GroupDetailPageState extends State<GroupDetailPage> {
               child: ListTile(
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
-                  side: BorderSide(color: Colors.red.withAlpha(40)),
+                  side: BorderSide(
+                    color: const Color.fromARGB(
+                      255,
+                      165,
+                      127,
+                      125,
+                    ).withAlpha(40),
+                  ),
                 ),
-                tileColor: Colors.red.withAlpha(15),
+                tileColor: const Color.fromARGB(
+                  255,
+                  162,
+                  100,
+                  96,
+                ).withAlpha(15),
                 leading: const Icon(
                   Icons.exit_to_app_rounded,
                   color: Colors.redAccent,
@@ -1028,7 +1121,7 @@ class _GroupDetailPageState extends State<GroupDetailPage> {
                 title: const Text(
                   "Gruptan Ayrıl",
                   style: TextStyle(
-                    color: Colors.redAccent,
+                    color: Color.fromARGB(255, 193, 135, 135),
                     fontWeight: FontWeight.bold,
                   ),
                 ),
