@@ -199,7 +199,7 @@ class ApiClient {
     );
   }
 
-  // FOTOĞRAFLI MESAJ GÖNDERME
+  // fotolu mesaj
   Future<http.Response> sendImageMessage({
     required String token,
     required int senderId,
@@ -223,7 +223,9 @@ class ApiClient {
     return await http.Response.fromStream(streamedResponse);
   }
 
-  // GRUP BİLGİLERİNİ GÜNCELLEME
+  //-----grup sohbetleri---------
+
+  // grup bilgi düzenleme
   Future<http.Response> editGroup({
     required String token,
     required int roomId,
@@ -243,7 +245,7 @@ class ApiClient {
     );
   }
 
-  // GRUP FOTOĞRAFI DÜZENLEME
+  // grup foto düzenleme
   Future<http.StreamedResponse> editGroupImage({
     required String token,
     required int roomId,
@@ -260,7 +262,7 @@ class ApiClient {
     return await request.send();
   }
 
-  // GRUBA ÜYE EKLEME METODU (DÜZELTİLDİ: post YARDIMCI METODU KULLANILIYOR)
+  // gruba üye ekleme
   Future<http.Response> addGroupParticipant({
     required String token,
     required int roomId,
@@ -274,7 +276,7 @@ class ApiClient {
     );
   }
 
-  // GRUPTAN AYRILMA METODU
+  // gruptan ayrilma
   Future<http.Response> leaveGroup({
     required String token,
     required int roomId,
@@ -292,7 +294,7 @@ class ApiClient {
     );
   }
 
-  // GRUP ÜYESİ ÇIKARMA METODU (DÜZELTİLDİ: put YARDIMCI METODU KULLANILIYOR)
+  // gruptan üye cikarma
   Future<http.Response> editGroupMembers({
     required String token,
     required int roomId,
@@ -309,4 +311,76 @@ class ApiClient {
       },
     );
   }
+
+  // Mesaj Silme (PUT /delete-message)
+  Future<http.Response> deleteMessage({
+    required String token,
+    required int messageId,
+    required int userId,
+  }) async {
+    final url = Uri.parse('$baseUrl/chat/delete-message');
+    return await http.put(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({'message_id': messageId, 'user_id': userId}),
+    );
+  }
+
+  // Hesap Silme (PUT /delete-account)
+  Future<http.Response> deleteAccount(String token) async {
+    // NOT: Eğer server.js'de app.use('/auth', authRouter) şeklinde tanımlıysa
+    // '$baseUrl/auth/delete-account' yazmalısınız.
+    final url = Uri.parse('$baseUrl/auth/delete-account');
+    return await http.put(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    );
+  }
+
+  // 1-1 SOHBET SİLME
+  Future<http.Response> deletePrivateChat({
+    required String token,
+    required int roomId,
+    required int userId,
+  }) async {
+    return await put(
+      url: 'chat/delete-private-chat',
+      token: token,
+      body: {'room_id': roomId, 'user_id': userId},
+    );
+  }
+
+  // GRUP SİLME
+  Future<http.Response> deleteGroup({
+    required String token,
+    required int roomId,
+    required int adminId,
+  }) async {
+    return await put(
+      url: 'chat/delete-group',
+      token: token,
+      body: {'room_id': roomId, 'admin_id': adminId},
+    );
+  }
+  // SOHBET SİLME
+Future<http.Response> deleteRoom({
+  required String token,
+  required int roomId,
+  required int userId,
+}) async {
+  return await put(
+    url: "chat/delete-room",
+    token: token,
+    body: {
+      "room_id": roomId,
+      "user_id": userId,
+    },
+  );
+}
 }

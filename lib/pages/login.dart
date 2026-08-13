@@ -23,6 +23,33 @@ class _LoginPageState extends State<LoginPage> {
   final ApiClient api = ApiClient();
 
   bool _obscurePassword = true;
+  bool _rememberMe = false;
+  Future<void> _loadSavedLogin() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    final savedUsername = prefs.getString("savedUsername");
+    final savedPassword = prefs.getString("savedPassword");
+
+    if (!mounted) return;
+
+    setState(() {
+      if (savedUsername != null) {
+        _usernameController.text = savedUsername;
+      }
+
+      if (savedPassword != null) {
+        _passwordController.text = savedPassword;
+      }
+
+      _rememberMe = savedUsername != null && savedPassword != null;
+    });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSavedLogin();
+  }
 
   @override
   void dispose() {
@@ -78,7 +105,17 @@ class _LoginPageState extends State<LoginPage> {
         await prefs.setString("userName", user["user_name"]);
         await prefs.setString("fullName", user["full_name"]);
         await prefs.setString("email", user["email"]);
+        if (_rememberMe) {
+          await prefs.setString(
+            "savedUsername",
+            _usernameController.text.trim(),
+          );
 
+          await prefs.setString("savedPassword", _passwordController.text);
+        } else {
+          await prefs.remove("savedUsername");
+          await prefs.remove("savedPassword");
+        }
         try {
           String? fcmToken;
 
@@ -135,7 +172,7 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
-@override
+  @override
   Widget build(BuildContext context) {
     // Üst alanın rengini değiştirmek isterseniz buraya istediğiniz rengi verebilirsiniz.
     final Color topHeaderColor = Theme.of(context).colorScheme.primary;
@@ -152,7 +189,7 @@ class _LoginPageState extends State<LoginPage> {
               child: Center(
                 child: Container(
                   height: 210, // Logonun yüksekliği büyütüldü (Eski değer: 110)
-                  width: 210,  // Logonun genişliği büyütüldü (Eski değer: 110)
+                  width: 210, // Logonun genişliği büyütüldü (Eski değer: 110)
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(28),
                   ),
@@ -197,9 +234,7 @@ class _LoginPageState extends State<LoginPage> {
                       children: [
                         Text(
                           "Giriş Yapın",
-                          style: Theme.of(context)
-                              .textTheme
-                              .headlineLarge
+                          style: Theme.of(context).textTheme.headlineLarge
                               ?.copyWith(
                                 fontSize: 30,
                                 fontWeight: FontWeight.bold,
@@ -248,7 +283,21 @@ class _LoginPageState extends State<LoginPage> {
                         ),
 
                         const SizedBox(height: 32),
+                        Row(
+                          children: [
+                            Checkbox(
+                              value: _rememberMe,
+                              onChanged: (value) {
+                                setState(() {
+                                  _rememberMe = value ?? false;
+                                });
+                              },
+                            ),
+                            const Text("Beni Hatırla"),
+                          ],
+                        ),
 
+                        const SizedBox(height: 16),
                         // GİRİŞ BUTONU
                         ElevatedButton(
                           onPressed: _login,

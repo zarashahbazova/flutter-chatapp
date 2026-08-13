@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -477,6 +478,192 @@ class _MessagesPageState extends State<MessagesPage> {
     });
   }
 
+  // 🔴 BASILI TUTUNCA AÇILAN SEÇENEK MENÜSÜ (AÇIKTA SİYAH, KOYUDA BEYAZ YAZI)
+  void _showChatOptionsMenu(Map<String, dynamic> user) {
+    final onSurfaceColor = Theme.of(context).colorScheme.onSurface;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 36,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: onSurfaceColor.withAlpha(50),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(height: 12),
+
+                // 1. SADECE MESAJLARI SİL
+                ListTile(
+                  leading: const Icon(
+                    Icons.cleaning_services_rounded,
+                    color: AppTheme.primaryNavy,
+                  ),
+                  title: Text(
+                    "Sadece Sohbet Mesajlarını Sil",
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: onSurfaceColor, // Açıkta siyah, koyuda beyaz
+                    ),
+                  ),
+                  subtitle: Text(
+                    "Sohbet listede kalır, tüm mesajlar temizlenir.",
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: onSurfaceColor.withAlpha(140),
+                    ),
+                  ),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _clearChatMessages(user["room_id"]);
+                  },
+                ),
+
+                const Divider(height: 1),
+
+                // 2. SOHBETİ SİL (TAMAMEN KALDIR)
+                ListTile(
+                  leading: const Icon(
+                    Icons.delete_outline_rounded,
+                    color: AppTheme.errorColor,
+                  ),
+                  title: const Text(
+                    "Sohbeti Sil",
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.errorColor,
+                    ),
+                  ),
+                  subtitle: Text(
+                    "Sohbet ve tüm mesajlar listeden kaldırılır.",
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: onSurfaceColor.withAlpha(140),
+                    ),
+                  ),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _deleteChat(user);
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  // 1. SOHBETİ TAMAMEN SİLME
+Future<void> _deleteChat(Map<String, dynamic> user) async {
+  if (token == null || currentUserId == null) return;
+
+  final roomId = user["room_id"];
+  final bool isGroup = user["is_group"] == true;
+
+  if (roomId == null) {
+    AppTheme.showSnackBar(
+      context,
+      message: "Sohbet bilgisi bulunamadı.",
+      isError: true,
+    );
+    return;
+  }
+
+  try {
+    late http.Response response;
+
+    if (isGroup) {
+      final adminId = user["admin_id"];
+
+      if (adminId == null ||
+          adminId.toString() != currentUserId.toString()) {
+        AppTheme.showSnackBar(
+          context,
+          message: "Bu grubu sadece grup yöneticisi silebilir.",
+          isError: true,
+        );
+        return;
+      }
+
+      response = await api.deleteGroup(
+        token: token!,
+        roomId: int.parse(roomId.toString()),
+        adminId: currentUserId!,
+      );
+    } else {
+      response = await api.deletePrivateChat(
+        token: token!,
+        roomId: int.parse(roomId.toString()),
+        userId: currentUserId!,
+      );
+    }
+
+    if (response.statusCode == 200) {
+      if (!mounted) return;
+
+      setState(() {
+        users.removeWhere(
+          (item) => item["room_id"].toString() == roomId.toString(),
+        );
+      });
+
+      AppTheme.showSnackBar(
+        context,
+        message: "Sohbet silindi.",
+        isError: false,
+      );
+    } else {
+      final data = jsonDecode(response.body);
+
+      if (!mounted) return;
+
+      AppTheme.showSnackBar(
+        context,
+        message: data["error"] ?? "Sohbet silinemedi.",
+        isError: true,
+      );
+    }
+  } catch (e) {
+    if (!mounted) return;
+
+    AppTheme.showSnackBar(
+      context,
+      message: "Sohbet silinirken hata oluştu: $e",
+      isError: true,
+    );
+  }
+}
+  // 2. Sadece MESAJLARI SİLME (Sohbet Kutusunu Tutma)
+  Future<void> _clearChatMessages(dynamic roomId) async {
+    setState(() {
+      final index = users.indexWhere((item) => item["room_id"] == roomId);
+      if (index != -1) {
+        users[index]["message"] = "Henüz mesaj yok...";
+        users[index]["unread"] = 0;
+        users[index]["time"] = "";
+      }
+    });
+
+    AppTheme.showSnackBar(
+      context,
+      message: "Sohbet mesajları silindi.",
+      isError: false,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -498,7 +685,6 @@ class _MessagesPageState extends State<MessagesPage> {
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 250),
                 decoration: BoxDecoration(
-                  // Sayfa üstündeyken tamamen şeffaf, 60px aşağı kayınca belirginleşir
                   color: _showSmallTitle
                       ? surfaceColor.withAlpha(220)
                       : Colors.transparent,
@@ -528,7 +714,44 @@ class _MessagesPageState extends State<MessagesPage> {
                   surfaceTintColor: Colors.transparent,
                   centerTitle: true,
 
-                  // BAŞLIK - Başta şeffaf / düz yazı, kaydırınca netleşir
+                  // 🔴 SOL ÜSTE "X yeni mesaj" YAZI FORMATI
+                  leadingWidth: 120,
+                  leading: totalUnread > 0
+                      ? Padding(
+                          padding: const EdgeInsets.only(left: 12),
+                          child: Center(
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 5,
+                              ),
+                              decoration: BoxDecoration(
+                                color: theme.colorScheme.primary,
+                                borderRadius: BorderRadius.circular(16),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: theme.colorScheme.primary
+                                        .withAlpha(80),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: Text(
+                                totalUnread > 99
+                                    ? "99+ yeni mesaj"
+                                    : "$totalUnread yeni mesaj",
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ),
+                        )
+                      : null,
+
                   title: Text(
                     "Sohbetler",
                     style: TextStyle(
@@ -539,7 +762,6 @@ class _MessagesPageState extends State<MessagesPage> {
                     ),
                   ),
 
-                  // SAĞ BUTON - Yeni Sohbet
                   actions: [
                     Padding(
                       padding: const EdgeInsets.only(right: 12),
@@ -581,7 +803,6 @@ class _MessagesPageState extends State<MessagesPage> {
           : null,
       body: Stack(
         children: [
-          // Sayfa İçerikleri (Sohbetler & Profil)
           PageView(
             controller: _pageController,
             onPageChanged: (index) {
@@ -595,7 +816,6 @@ class _MessagesPageState extends State<MessagesPage> {
             ],
           ),
 
-          // 🌟 Android Navigasyon Çubuğunun Tam Üstünde Süzülen Glass Navigation Bar
           Positioned(
             left: 0,
             right: 0,
@@ -650,7 +870,6 @@ class _MessagesPageState extends State<MessagesPage> {
         bottom: MediaQuery.of(context).padding.bottom + 100,
       ),
       children: [
-        // Arama Çubuğu
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 18),
           child: Container(
@@ -722,7 +941,6 @@ class _MessagesPageState extends State<MessagesPage> {
         ),
         const SizedBox(height: 12),
 
-        // Filtrele Butonları
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           physics: const BouncingScrollPhysics(),
@@ -772,7 +990,6 @@ class _MessagesPageState extends State<MessagesPage> {
         ),
         const SizedBox(height: 10),
 
-        // Liste / Boş Durum
         if (filteredUsers.isEmpty)
           Padding(
             padding: const EdgeInsets.only(top: 40),
@@ -799,8 +1016,11 @@ class _MessagesPageState extends State<MessagesPage> {
           )
         else
           ...filteredUsers.map(
-            (user) =>
-                MessageTile(user: user, onTap: () => _handleTileTap(user)),
+            (user) => MessageTile(
+              user: user,
+              onTap: () => _handleTileTap(user),
+              onLongPress: () => _showChatOptionsMenu(user), // 👈 Basılı tutunca seçenek menüsü
+            ),
           ),
       ],
     );

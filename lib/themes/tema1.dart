@@ -166,7 +166,7 @@ class AppTheme {
           color: textColor,
         ),
         bodyLarge: TextStyle(fontSize: smallFont, color: textColor),
-        bodyMedium: TextStyle(fontSize: inputFont, color: subtitleColor),
+        bodyMedium: TextStyle(fontSize: inputFont, color: Color.fromARGB(255, 0, 0, 0)),
       ),
     );
   }

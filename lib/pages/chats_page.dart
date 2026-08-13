@@ -18,7 +18,7 @@ class ChatsPage extends StatefulWidget {
   final String? roomDesc;
   final bool isGroup;
   final dynamic participants;
-  final int adminId; // Grubu kuran kişinin ID'si
+  final int adminId;
 
   const ChatsPage({
     super.key,
@@ -115,6 +115,7 @@ class _ChatsPageState extends State<ChatsPage> {
           setState(() {
             messages.add({
               "sender_id": incomingSenderId,
+              "sender_name": data['sender_name'] ?? data['sender_username'],
               "message": incomingText,
               "image_url": incomingImageUrl,
               "timestamp":
@@ -264,9 +265,7 @@ class _ChatsPageState extends State<ChatsPage> {
       if (room == null || !mounted) return;
 
       final List participants = List<dynamic>.from(room["participants"] ?? []);
-
       final String? groupPhotoUrl = room["display_photo"];
-
       final String? roomDesc = room["display_description"];
 
       final int adminId =
@@ -322,9 +321,6 @@ class _ChatsPageState extends State<ChatsPage> {
     }
   }
 
-  // --- GRUP DETAY SAYFASINA YÖNLENDİRME (DÜZELTİLDİ) ---
-  // --- HEADER TIKLANDIĞINDA (Grup Detay / Bireysel Profil) ---
-  // --- HEADER TIKLANDIĞINDA (Grup Detay / Bireysel Profil) ---
   void _navigateToGroupDetail() {
     if (widget.isGroup) {
       _loadGroupDetailsAndNavigate();
@@ -345,7 +341,7 @@ class _ChatsPageState extends State<ChatsPage> {
   }
 
   String _messageKey(Map<String, dynamic> message, int index) {
-    return "${message["sender_id"]}_${message["timestamp"]}_$index";
+    return "${message["id"] ?? message["sender_id"]}_${message["timestamp"]}_$index";
   }
 
   String _formatTime(dynamic timestamp) {
@@ -362,6 +358,136 @@ class _ChatsPageState extends State<ChatsPage> {
       return "$hour:$minute";
     } catch (_) {
       return "";
+    }
+  }
+
+  // 🔍 Katılımcılardan Gönderenin Adını Bulma Yardımcısı
+  String _getSenderName(Map<String, dynamic> message) {
+    if (message["sender_name"] != null &&
+        message["sender_name"].toString().isNotEmpty) {
+      return message["sender_name"].toString();
+    }
+    final senderId = message["sender_id"]?.toString();
+    if (senderId != null && groupParticipants.isNotEmpty) {
+      final participant = groupParticipants.firstWhere(
+        (p) =>
+            p["id"]?.toString() == senderId ||
+            p["user_id"]?.toString() == senderId,
+        orElse: () => null,
+      );
+      if (participant != null) {
+        return participant["full_name"] ??
+            participant["user_name"] ??
+            "Kullanıcı";
+      }
+    }
+    return "Kullanıcı";
+  }
+
+  // 🗑️ MESAJI SİLME DİYALOĞU
+  void _confirmDeleteMessage(int index, Map<String, dynamic> message) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: const Text(
+            "Mesajı Sil",
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          content: const Text("Bu mesajı silmek istediğinizden emin misiniz?"),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("İptal"),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.errorColor,
+                minimumSize: const Size(90, 40),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              onPressed: () {
+                Navigator.pop(context);
+                _deleteMessage(index, message);
+              },
+              child: const Text("Sil", style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _deleteMessage(int index, Map<String, dynamic> message) async {
+    final messageId = message["message_id"] ?? message["id"];
+
+    if (token == null || currentUserId == null || messageId == null) {
+      AppTheme.showSnackBar(
+        context,
+        message: "Mesaj bilgisi alınamadı.",
+        isError: true,
+      );
+      return;
+    }
+
+    // Sadece kendi mesajını silme kontrolü (Backend de kontrol ediyor)
+    if (message["sender_id"].toString() != currentUserId.toString()) {
+      AppTheme.showSnackBar(
+        context,
+        message: "Sadece kendi gönderdiğiniz mesajları silebilirsiniz.",
+        isError: true,
+      );
+      return;
+    }
+
+    try {
+      final response = await api.deleteMessage(
+        token: token!,
+        messageId: int.parse(messageId.toString()),
+        userId: currentUserId!,
+      );
+
+      if (response.statusCode == 200) {
+        if (!mounted) return;
+
+        setState(() {
+          messages[index]["is_deleted"] = true;
+          messages[index]["message"] = null;
+          messages[index]["image_url"] = null;
+        });
+
+        AppTheme.showSnackBar(
+          context,
+          message: "Mesaj başarıyla silindi.",
+          isError: false,
+        );
+        if (!mounted) return;
+        AppTheme.showSnackBar(
+          context,
+          message: "Mesaj başarıyla silindi.",
+          isError: false,
+        );
+      } else {
+        final data = jsonDecode(response.body);
+        if (!mounted) return;
+        AppTheme.showSnackBar(
+          context,
+          message: data["error"] ?? "Mesaj silinemedi.",
+          isError: true,
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      AppTheme.showSnackBar(
+        context,
+        message: "Bir hata oluştu: $e",
+        isError: true,
+      );
     }
   }
 
@@ -425,7 +551,6 @@ class _ChatsPageState extends State<ChatsPage> {
 
       if (!mounted) return;
 
-      // Yeni mesaj yoksa hiçbir şey yapma
       if (_areMessagesSame(messages, newMessages)) {
         return;
       }
@@ -434,10 +559,8 @@ class _ChatsPageState extends State<ChatsPage> {
         messages = newMessages;
       });
 
-      // Yeni mesaj geldiyse aşağı kaydır
       _scrollToBottom();
 
-      // Odayı okundu olarak işaretle
       await api.markAsRead(
         token: token!,
         userId: currentUserId!,
@@ -506,7 +629,6 @@ class _ChatsPageState extends State<ChatsPage> {
     }
   }
 
-  // --- İZİN İSTEYİP RESİM SEÇME VE GÖNDERME ---
   Future<void> _pickAndSendImage(ImageSource source) async {
     PermissionStatus status;
 
@@ -821,8 +943,11 @@ class _ChatsPageState extends State<ChatsPage> {
                           (imageUrl != null && imageUrl.isNotEmpty)
                           ? "${ApiClient.baseUrl}${imageUrl.startsWith('/') ? imageUrl : '/$imageUrl'}"
                           : null;
-                      final String messageText =
-                          message["message"]?.toString() ?? "";
+                      final bool isDeleted = message["is_deleted"] == true;
+
+                      final String messageText = isDeleted
+                          ? "Bu mesaj silindi"
+                          : (message["message"]?.toString() ?? "");
 
                       const int maxMessageCharacters = 300;
 
@@ -838,188 +963,222 @@ class _ChatsPageState extends State<ChatsPage> {
                       final String displayedText = isLongMessage && !isExpanded
                           ? messageText.substring(0, maxMessageCharacters)
                           : messageText;
+
+                      final String senderName = _getSenderName(message);
+
                       return Align(
                         alignment: me
                             ? Alignment.centerRight
                             : Alignment.centerLeft,
-                        child: Container(
-                          constraints: BoxConstraints(
-                            maxWidth: MediaQuery.of(context).size.width * 0.70,
-                          ),
-                          margin: const EdgeInsets.only(bottom: 10),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 14,
-                            vertical: 10,
-                          ),
-                          decoration: BoxDecoration(
-                            color: me
-                                ? AppTheme.primaryNavy
-                                : surfaceColor.withAlpha(220),
-                            borderRadius: BorderRadius.only(
-                              topLeft: const Radius.circular(20),
-                              topRight: const Radius.circular(20),
-                              bottomLeft: Radius.circular(me ? 20 : 4),
-                              bottomRight: Radius.circular(me ? 4 : 20),
+                        child: GestureDetector(
+                          onLongPress: isDeleted
+                              ? null
+                              : () => _confirmDeleteMessage(
+                                  index,
+                                  message,
+                                ), // 👈 Basılı tutunca silme
+                          child: Container(
+                            constraints: BoxConstraints(
+                              maxWidth:
+                                  MediaQuery.of(context).size.width * 0.70,
                             ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withAlpha(10),
-                                blurRadius: 5,
-                                offset: const Offset(0, 2),
+                            margin: const EdgeInsets.only(bottom: 10),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 10,
+                            ),
+                            decoration: BoxDecoration(
+                              color: me
+                                  ? AppTheme.primaryNavy
+                                  : surfaceColor.withAlpha(220),
+                              borderRadius: BorderRadius.only(
+                                topLeft: const Radius.circular(20),
+                                topRight: const Radius.circular(20),
+                                bottomLeft: Radius.circular(me ? 20 : 4),
+                                bottomRight: Radius.circular(me ? 4 : 20),
                               ),
-                            ],
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              // --- 1. FOTOĞRAF VARSA GÖSTERİMİ ---
-                              if (fullMsgImageUrl != null) ...[
-                                ClipRRect(
-                                  borderRadius: BorderRadius.circular(12),
-                                  child: Image.network(
-                                    fullMsgImageUrl,
-                                    fit: BoxFit.cover,
-                                    frameBuilder:
-                                        (
-                                          context,
-                                          child,
-                                          frame,
-                                          wasSynchronouslyLoaded,
-                                        ) {
-                                          if (frame != null ||
-                                              wasSynchronouslyLoaded) {
-                                            WidgetsBinding.instance
-                                                .addPostFrameCallback((_) {
-                                                  if (mounted) {
-                                                    _scrollToBottom();
-                                                  }
-                                                });
-                                          }
-                                          return child;
-                                        },
-                                    loadingBuilder:
-                                        (context, child, loadingProgress) {
-                                          if (loadingProgress == null) {
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withAlpha(10),
+                                  blurRadius: 5,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                // --- 0. GRUP MESAJINDA GÖNDERENİN ADI ---
+                                if (widget.isGroup && !me) ...[
+                                  Text(
+                                    senderName,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppTheme.primaryNavy,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                ],
+
+                                // --- 1. FOTOĞRAF VARSA GÖSTERİMİ ---
+                                if (fullMsgImageUrl != null) ...[
+                                  ClipRRect(
+                                    borderRadius: BorderRadius.circular(12),
+                                    child: Image.network(
+                                      fullMsgImageUrl,
+                                      fit: BoxFit.cover,
+                                      frameBuilder:
+                                          (
+                                            context,
+                                            child,
+                                            frame,
+                                            wasSynchronouslyLoaded,
+                                          ) {
+                                            if (frame != null ||
+                                                wasSynchronouslyLoaded) {
+                                              WidgetsBinding.instance
+                                                  .addPostFrameCallback((_) {
+                                                    if (mounted) {
+                                                      _scrollToBottom();
+                                                    }
+                                                  });
+                                            }
                                             return child;
-                                          }
-                                          return const Padding(
-                                            padding: EdgeInsets.all(20.0),
-                                            child: CircularProgressIndicator(
-                                              color: Colors.white,
-                                            ),
-                                          );
-                                        },
-                                    errorBuilder: (context, error, stackTrace) {
-                                      return const Row(
+                                          },
+                                      loadingBuilder:
+                                          (context, child, loadingProgress) {
+                                            if (loadingProgress == null) {
+                                              return child;
+                                            }
+                                            return const Padding(
+                                              padding: EdgeInsets.all(20.0),
+                                              child: CircularProgressIndicator(
+                                                color: Colors.white,
+                                              ),
+                                            );
+                                          },
+                                      errorBuilder:
+                                          (context, error, stackTrace) {
+                                            return const Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Icon(
+                                                  Icons.broken_image_rounded,
+                                                  color: Colors.white54,
+                                                ),
+                                                SizedBox(width: 6),
+                                                Text(
+                                                  "Görsel yüklenemedi",
+                                                  style: TextStyle(
+                                                    color: Colors.white54,
+                                                    fontSize: 12,
+                                                  ),
+                                                ),
+                                              ],
+                                            );
+                                          },
+                                    ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                ],
+
+                                // --- 2. MESAJ METNİ VE SAAT HİZALAMASI ---
+                                if (messageText.trim().isNotEmpty)
+                                  Column(
+                                    crossAxisAlignment: CrossAxisAlignment.end,
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Row(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.end,
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
-                                          Icon(
-                                            Icons.broken_image_rounded,
-                                            color: Colors.white54,
-                                          ),
-                                          SizedBox(width: 6),
-                                          Text(
-                                            "Görsel yüklenemedi",
-                                            style: TextStyle(
-                                              color: Colors.white54,
-                                              fontSize: 12,
+                                          Flexible(
+                                            child: Text(
+                                              displayedText,
+                                              style: TextStyle(
+                                                fontSize: 15,
+                                                height: 1.3,
+                                                fontStyle: isDeleted
+                                                    ? FontStyle.italic
+                                                    : FontStyle.normal,
+                                                color: isDeleted
+                                                    ? Color.fromARGB(255, 182, 183, 190)
+                                                      
+                                                  
+                                                    : me
+                                                    ? AppTheme.backgroundColor
+                                                    : onSurfaceColor,
+                                              ),
                                             ),
                                           ),
+                                          const SizedBox(width: 8),
+                                          if (formattedTime.isNotEmpty)
+                                            Text(
+                                              formattedTime,
+                                              style: TextStyle(
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.w400,
+                                                color: me
+                                                    ? Colors.white.withAlpha(
+                                                        180,
+                                                      )
+                                                    : onSurfaceColor.withAlpha(
+                                                        120,
+                                                      ),
+                                              ),
+                                            ),
                                         ],
-                                      );
-                                    },
-                                  ),
-                                ),
-                                const SizedBox(height: 6),
-                              ],
-                              // --- 2. MESAJ METNİ VE SAAT HİZALAMASI ---
-                              if (messageText.trim().isNotEmpty)
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.end,
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Row(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.end,
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Flexible(
-                                          child: Text(
-                                            displayedText,
-                                            style: TextStyle(
-                                              fontSize: 15,
-                                              height: 1.3,
-                                              color: me
-                                                  ? Colors.white
-                                                  : onSurfaceColor,
-                                            ),
-                                          ),
-                                        ),
-
-                                        const SizedBox(width: 8),
-
-                                        if (formattedTime.isNotEmpty)
-                                          Text(
-                                            formattedTime,
-                                            style: TextStyle(
-                                              fontSize: 11,
-                                              fontWeight: FontWeight.w400,
-                                              color: me
-                                                  ? Colors.white.withAlpha(180)
-                                                  : onSurfaceColor.withAlpha(
-                                                      120,
-                                                    ),
-                                            ),
-                                          ),
-                                      ],
-                                    ),
-
-                                    if (isLongMessage)
-                                      Align(
-                                        alignment: Alignment.centerLeft,
-                                        child: TextButton(
-                                          onPressed: () {
-                                            setState(() {
-                                              if (isExpanded) {
-                                                _expandedMessages.remove(
-                                                  messageKey,
-                                                );
-                                              } else {
-                                                _expandedMessages.add(
-                                                  messageKey,
-                                                );
-                                              }
-                                            });
-                                          },
-                                          style: TextButton.styleFrom(
-                                            padding: EdgeInsets.zero,
-                                            minimumSize: const Size(0, 30),
-                                            tapTargetSize: MaterialTapTargetSize
-                                                .shrinkWrap,
-                                          ),
-                                          child: Text(
-                                            isExpanded
-                                                ? "Daha az göster"
-                                                : "Devam et",
-                                            style: TextStyle(
-                                              fontSize: 13,
-                                              fontWeight: FontWeight.w600,
-                                              color: me
-                                                  ? Colors.white
-                                                  : const Color.fromARGB(
-                                                      255,
-                                                      118,
-                                                      99,
-                                                      148,
-                                                    ),
-                                            ),
-                                          ),
-                                        ),
                                       ),
-                                  ],
-                                ),
-                            ],
+                                      if (isLongMessage)
+                                        Align(
+                                          alignment: Alignment.centerLeft,
+                                          child: TextButton(
+                                            onPressed: () {
+                                              setState(() {
+                                                if (isExpanded) {
+                                                  _expandedMessages.remove(
+                                                    messageKey,
+                                                  );
+                                                } else {
+                                                  _expandedMessages.add(
+                                                    messageKey,
+                                                  );
+                                                }
+                                              });
+                                            },
+                                            style: TextButton.styleFrom(
+                                              padding: EdgeInsets.zero,
+                                              minimumSize: const Size(0, 30),
+                                              tapTargetSize:
+                                                  MaterialTapTargetSize
+                                                      .shrinkWrap,
+                                            ),
+                                            child: Text(
+                                              isExpanded
+                                                  ? "Daha az göster"
+                                                  : "Devam et",
+                                              style: TextStyle(
+                                                fontSize: 13,
+                                                fontWeight: FontWeight.w600,
+                                                color: me
+                                                    ? Colors.white
+                                                    : const Color.fromARGB(
+                                                        255,
+                                                        118,
+                                                        99,
+                                                        148,
+                                                      ),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                              ],
+                            ),
                           ),
                         ),
                       );
@@ -1033,7 +1192,6 @@ class _ChatsPageState extends State<ChatsPage> {
               padding: const EdgeInsets.fromLTRB(12, 8, 16, 12),
               child: Row(
                 children: [
-                  // --- MEDYA EKLEME (+) BUTONU ---
                   IconButton(
                     onPressed: isSendingImage ? null : _showMediaOptions,
                     icon: isSendingImage
@@ -1053,7 +1211,7 @@ class _ChatsPageState extends State<ChatsPage> {
                     child: Container(
                       decoration: BoxDecoration(
                         color: surfaceColor.withAlpha(220),
-                        borderRadius: BorderRadius.circular(28),
+                        borderRadius: BorderRadius.circular(50),
                       ),
                       child: TextField(
                         controller: _messageController,

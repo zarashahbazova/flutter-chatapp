@@ -5,11 +5,13 @@ import 'package:stajapp/themes/tema1.dart';
 class MessageTile extends StatelessWidget {
   final Map<String, dynamic> user;
   final VoidCallback onTap;
+  final VoidCallback? onLongPress; // 👈 LongPress callback'i eklendi
 
   const MessageTile({
     super.key,
     required this.user,
     required this.onTap,
+    this.onLongPress,
   });
 
   @override
@@ -55,11 +57,11 @@ class MessageTile extends StatelessWidget {
             borderRadius: BorderRadius.circular(20),
             splashColor: primaryColor.withAlpha(20),
             onTap: onTap,
+            onLongPress: onLongPress, // 👈 Basılı tutma desteği
             child: Padding(
               padding: const EdgeInsets.all(12),
               child: Row(
                 children: [
-                  // --- AVATAR VEYA PROFİL FOTOĞRAFI ---
                   Container(
                     width: 52,
                     height: 52,
@@ -203,5 +205,3 @@ class MessageTile extends StatelessWidget {
     );
   }
 }
-
-

@@ -154,7 +154,7 @@ class CustomGlassNavBar extends StatelessWidget {
                                               vertical: 2,
                                             ),
                                             decoration: BoxDecoration(
-                                              color: Colors.redAccent,
+                                              color: const Color.fromARGB(255, 202, 194, 215),
                                               borderRadius:
                                                   BorderRadius.circular(10),
                                               border: Border.all(

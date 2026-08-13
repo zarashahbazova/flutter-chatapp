@@ -56,7 +56,7 @@ class _GroupDetailPageState extends State<GroupDetailPage> {
     _fetchRoomDetails();
   }
 
-  Future<void> _fetchRoomDetails() async {
+  Future<void> _fetchRoomDetails() async { //güncel grup bilgilri
     try {
       final response = await api.rooms(
         token: widget.token,
@@ -97,59 +97,97 @@ class _GroupDetailPageState extends State<GroupDetailPage> {
     }
   }
 
-  // --- GRUP FOTOĞRAFI YÜKLEME ---
-  Future<void> _pickAndUploadGroupPhoto() async {
-    if (!isAdmin) return;
+Future<void> _pickAndUploadGroupPhoto() async { //grup fotosu secip backende gönderme
+  if (!isAdmin) return;
 
-    final XFile? image = await _picker.pickImage(
-      source: ImageSource.gallery,
-      imageQuality: 75,
+  final source = await showModalBottomSheet<ImageSource>(
+    context: context,
+    builder: (context) {
+      return SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.camera_alt_rounded),
+              title: const Text("Kamerayı Aç"),
+              onTap: () {
+                Navigator.pop(context, ImageSource.camera);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library_rounded),
+              title: const Text("Galeriden Seç"),
+              onTap: () {
+                Navigator.pop(context, ImageSource.gallery);
+              },
+            ),
+          ],
+        ),
+      );
+    },
+  );
+
+  if (source == null) return;
+
+  final XFile? image = await _picker.pickImage(
+    source: source,
+    imageQuality: 75,
+  );
+
+  if (image == null) return;
+
+  if (!mounted) return;
+  setState(() => isUploadingPhoto = true);
+
+  try {
+    final streamedRes = await api.editGroupImage(
+      token: widget.token,
+      roomId: widget.roomId,
+      adminId: widget.currentUserId,
+      filePath: image.path,
     );
 
-    if (image != null) {
-      setState(() => isUploadingPhoto = true);
-      try {
-        final streamedRes = await api.editGroupImage(
-          token: widget.token,
-          roomId: widget.roomId,
-          adminId: widget.currentUserId,
-          filePath: image.path,
-        );
-        final response = await http.Response.fromStream(streamedRes);
+    final response = await http.Response.fromStream(streamedRes);
 
-        if (response.statusCode == 200) {
-          final data = jsonDecode(response.body);
-          setState(() {
-            currentGroupPhotoUrl = data["data"]["photo_url"];
-          });
-          if (mounted) {
-            AppTheme.showSnackBar(
-              context,
-              message: "Grup fotoğrafı güncellendi!",
-              isError: false,
-            );
-          }
-        } else {
-          if (mounted) {
-            AppTheme.showSnackBar(
-              context,
-              message: "Fotoğraf güncellenemedi.",
-              isError: true,
-            );
-          }
-        }
-      } catch (e) {
-        if (mounted) {
-          AppTheme.showSnackBar(context, message: "Hata: $e", isError: true);
-        }
-      } finally {
-        if (mounted) setState(() => isUploadingPhoto = false);
-      }
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+
+      if (!mounted) return;
+
+      setState(() {
+        currentGroupPhotoUrl = data["data"]["photo_url"];
+      });
+
+      AppTheme.showSnackBar(
+        context,
+        message: "Grup fotoğrafı güncellendi!",
+        isError: false,
+      );
+    } else {
+      if (!mounted) return;
+
+      AppTheme.showSnackBar(
+        context,
+        message: "Fotoğraf güncellenemedi.",
+        isError: true,
+      );
+    }
+  } catch (e) {
+    if (!mounted) return;
+
+    AppTheme.showSnackBar(
+      context,
+      message: "Hata: $e",
+      isError: true,
+    );
+  } finally {
+    if (mounted) {
+      setState(() => isUploadingPhoto = false);
     }
   }
+}
 
-  // --- GRUP ADI VE AÇIKLAMASINI DÜZENLEME ---
-  void _showEditGroupInfoDialog() {
+  void _showEditGroupInfoDialog() { //grup adı ve acıklaması degistirir
     if (!isAdmin) return;
     final nameController = TextEditingController(text: currentRoomName);
     final descController = TextEditingController(text: currentRoomDesc);
@@ -249,8 +287,7 @@ class _GroupDetailPageState extends State<GroupDetailPage> {
     );
   }
 
-  // --- ÜYE SİLME ONAY DIALOG'U ---
-  void _showConfirmRemoveDialog({
+  void _showConfirmRemoveDialog({ //gruptan üye cikarma
     required dynamic userId,
     required String username,
     required int index,
@@ -333,7 +370,7 @@ class _GroupDetailPageState extends State<GroupDetailPage> {
     );
   }
 
-  void _showSelectNewAdminDialog() {
+  void _showSelectNewAdminDialog() { //yeni yönetici seçme
     // Kendisi dışındaki kullanıcıları alıyoruz.
     final otherParticipants = currentParticipants
         .where((p) => p["id"].toString() != widget.currentUserId.toString())
@@ -468,7 +505,7 @@ class _GroupDetailPageState extends State<GroupDetailPage> {
     );
   }
 
-  void _showConfirmLeaveWithNewAdminDialog(dynamic selectedUser) {
+  void _showConfirmLeaveWithNewAdminDialog(dynamic selectedUser) { //yöneticinin ayırlması
     final name =
         selectedUser["full_name"] ?? selectedUser["user_name"] ?? "Kullanıcı";
 
@@ -560,8 +597,7 @@ class _GroupDetailPageState extends State<GroupDetailPage> {
     );
   }
 
-  // --- GRUPTAN AYRILMA ONAYI ---
-  void _showLeaveGroupDialog() {
+  void _showLeaveGroupDialog() { //gruptan ayrilma onayı
     if (isAdmin) {
       _showSelectNewAdminDialog();
       return;
@@ -650,8 +686,7 @@ class _GroupDetailPageState extends State<GroupDetailPage> {
     );
   }
 
-  // --- CANLI ARAMALI KATILIMCI EKLEME DIALOG'U (GroupChatDialog Mantığıyla Birebir Aynı) ---
-  void _showAddParticipantDialog() {
+  void _showAddParticipantDialog() {//katılımcı ekleme dialogu
     if (!isAdmin) return;
 
     final TextEditingController searchController = TextEditingController();
