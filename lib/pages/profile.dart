@@ -37,7 +37,7 @@ class _ProfilePageState extends State<ProfilePage> {
     _loadProfile();
   }
 
-  Future<void> _handleExpiredToken() async {
+  Future<void> _handleExpiredToken() async { //token gecerli degilse sistemden at kulaniciyi
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove("token");
 
@@ -65,7 +65,7 @@ class _ProfilePageState extends State<ProfilePage> {
         return;
       }
 
-      final response = await api.profile(token);
+      final response = await api.profile(token); // profil istegi backende
 
       if (response.statusCode == 401 || response.statusCode == 403) {
         await _handleExpiredToken();
@@ -86,7 +86,9 @@ class _ProfilePageState extends State<ProfilePage> {
           final birthDate = profile["birth_date"];
 
           if (birthDate != null && birthDate.toString().isNotEmpty) {
-            DateTime parsedDate = DateFormat("dd-MM-yyyy").parseStrict(birthDate);
+            DateTime parsedDate = DateFormat(
+              "dd-MM-yyyy",
+            ).parseStrict(birthDate);
             _currentBirthDate = DateFormat("dd-MM-yyyy").format(parsedDate);
           } else {
             _currentBirthDate = "";
@@ -128,7 +130,7 @@ class _ProfilePageState extends State<ProfilePage> {
       );
 
       if (image != null) {
-        await _uploadProfilePhoto(image.path);
+        await _uploadProfilePhoto(image.path); //dosya yolunu gönderiyor
       }
     } else {
       if (!mounted) return;
@@ -152,7 +154,7 @@ class _ProfilePageState extends State<ProfilePage> {
         return;
       }
 
-      final response = await api.updateProfilePhoto(
+      final response = await api.updateProfilePhoto( //spiclienta yolluyor fotografi, o da backende
         token: token,
         filePath: filePath,
       );
@@ -315,7 +317,7 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
-  Future<void> _logout() async {
+  Future<void> _logout() async { //token siliniyor eski sayfalar nav stackden temizleniyo
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove("token");
 
@@ -327,7 +329,6 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  // --- YENİ EKRANA YÖNLENDİRME METODU ---
   void _navigateToEditProfile() {
     Navigator.push(
       context,
@@ -346,27 +347,34 @@ class _ProfilePageState extends State<ProfilePage> {
 
   @override
   Widget build(BuildContext context) {
-    final String firstLetter = _currentName.isNotEmpty ? _currentName[0].toUpperCase() : "?";
+    final String firstLetter = _currentName.isNotEmpty
+        ? _currentName[0].toUpperCase()
+        : "?";
 
-    final String? fullPhotoUrl = (_profilePhotoUrl != null && _profilePhotoUrl!.isNotEmpty)
+    final String? fullPhotoUrl = //backendden gelen pathi urlye dönüstürüyo
+        (_profilePhotoUrl != null && _profilePhotoUrl!.isNotEmpty)
         ? "${ApiClient.baseUrl}${_profilePhotoUrl!.startsWith('/') ? _profilePhotoUrl : '/$_profilePhotoUrl'}?v=${DateTime.now().millisecondsSinceEpoch}"
         : null;
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+
       extendBody: true,
       appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.edit_note_rounded, size: 28),
-          onPressed: _navigateToEditProfile, // <-- YENİ EKRANA GİDER
-        ),
+
         title: Text(
           "Profil",
           style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                fontWeight: FontWeight.w800,
-                letterSpacing: -0.5,
-              ),
+            fontWeight: FontWeight.w800,
+            letterSpacing: -0.5,
+          ),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.edit_note_rounded, size: 28),
+            onPressed: _navigateToEditProfile,
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -409,23 +417,13 @@ class _ProfilePageState extends State<ProfilePage> {
                       child: _isUploadingPhoto
                           ? const CircularProgressIndicator(color: Colors.white)
                           : fullPhotoUrl != null
-                              ? ClipOval(
-                                  child: Image.network(
-                                    fullPhotoUrl,
-                                    width: 130,
-                                    height: 130,
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (_, __, ___) => Text(
-                                      firstLetter,
-                                      style: const TextStyle(
-                                        fontSize: 48,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                  ),
-                                )
-                              : Text(
+                          ? ClipOval(
+                              child: Image.network(
+                                fullPhotoUrl,
+                                width: 130,
+                                height: 130,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) => Text(
                                   firstLetter,
                                   style: const TextStyle(
                                     fontSize: 48,
@@ -433,6 +431,16 @@ class _ProfilePageState extends State<ProfilePage> {
                                     color: Colors.white,
                                   ),
                                 ),
+                              ),
+                            )
+                          : Text(
+                              firstLetter,
+                              style: const TextStyle(
+                                fontSize: 48,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
                     ),
 
                     Positioned(
@@ -521,7 +529,9 @@ class _ProfilePageState extends State<ProfilePage> {
                   borderRadius: BorderRadius.circular(18),
                 ),
                 secondary: Icon(
-                  _isDarkMode ? Icons.dark_mode_rounded : Icons.light_mode_rounded,
+                  _isDarkMode
+                      ? Icons.dark_mode_rounded
+                      : Icons.light_mode_rounded,
                   color: Theme.of(context).colorScheme.primary,
                 ),
                 title: Text(
@@ -534,7 +544,9 @@ class _ProfilePageState extends State<ProfilePage> {
                 ),
                 onChanged: (value) async {
                   setState(() => _isDarkMode = value);
-                  themeNotifier.value = value ? ThemeMode.dark : ThemeMode.light;
+                  themeNotifier.value = value
+                      ? ThemeMode.dark
+                      : ThemeMode.light;
                   final prefs = await SharedPreferences.getInstance();
                   await prefs.setBool("isDarkMode", value);
                 },
@@ -552,7 +564,9 @@ class _ProfilePageState extends State<ProfilePage> {
                   backgroundColor: Theme.of(context).colorScheme.primary,
                   foregroundColor: Colors.white,
                   elevation: 2,
-                  shadowColor: Theme.of(context).colorScheme.primary.withAlpha(60),
+                  shadowColor: Theme.of(
+                    context,
+                  ).colorScheme.primary.withAlpha(60),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(18),
                   ),

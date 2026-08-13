@@ -73,7 +73,6 @@ class _LoginPageState extends State<LoginPage> {
             ? user["id"]
             : int.parse(user["id"].toString());
 
-        // Kullanıcı bilgilerini kaydet
         await prefs.setString("token", token);
         await prefs.setInt("userId", userId);
         await prefs.setString("userName", user["user_name"]);
@@ -101,10 +100,8 @@ class _LoginPageState extends State<LoginPage> {
             await api.updateFcmToken(token: token, fcmToken: fcmToken);
           }
         } catch (e) {
-          // FCM problemi login'i engellemeyecek.
           print("FCM token alınamadı: $e");
         }
-        
 
         if (!mounted) return;
 
@@ -138,113 +135,156 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
-  @override
+@override
   Widget build(BuildContext context) {
+    // Üst alanın rengini değiştirmek isterseniz buraya istediğiniz rengi verebilirsiniz.
+    final Color topHeaderColor = Theme.of(context).colorScheme.primary;
+
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      backgroundColor: topHeaderColor,
       body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                children: [
-                  Icon(
-                    Icons.account_circle,
-                    size: 140,
-                    color: Theme.of(context).colorScheme.primary,
+        bottom: false,
+        child: Column(
+          children: [
+            // --- ÜST ALAN (Büyütülmüş Logo Alanı) ---
+            Expanded(
+              flex: 3, // Üst alanın ekrandaki yüksekliğini artırdık
+              child: Center(
+                child: Container(
+                  height: 210, // Logonun yüksekliği büyütüldü (Eski değer: 110)
+                  width: 210,  // Logonun genişliği büyütüldü (Eski değer: 110)
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(28),
                   ),
-
-                  const SizedBox(height: 20),
-
-                  Text(
-                    "Giriş Yapın",
-                    style: Theme.of(
-                      context,
-                    ).textTheme.headlineLarge?.copyWith(fontSize: 32),
-                  ),
-
-                  const SizedBox(height: 40),
-
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      "Devam etmek için bilgilerinizi girin.",
-                      style: Theme.of(context).textTheme.bodyMedium,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(28),
+                    child: Image.asset(
+                      'assets/images/logo.png',
+                      fit: BoxFit.contain, // Logoyu çerçeveye sığdırır
+                      errorBuilder: (context, error, stackTrace) {
+                        return const Icon(
+                          Icons.chat_bubble_outline_rounded,
+                          size: 100, // Yüklenemeyen ikon da büyütüldü
+                          color: Colors.white,
+                        );
+                      },
                     ),
                   ),
-                  const SizedBox(height: 20),
-
-                  TextFormField(
-                    controller: _usernameController,
-                    validator: _validateUsername,
-                    decoration: const InputDecoration(
-                      labelText: "Kullanıcı Adı",
-                      prefixIcon: Icon(Icons.person),
-                    ),
-                  ),
-
-                  const SizedBox(height: 18),
-
-                  TextFormField(
-                    controller: _passwordController,
-                    obscureText: _obscurePassword,
-                    validator: _validatePassword,
-                    decoration: InputDecoration(
-                      labelText: "Şifre",
-                      prefixIcon: const Icon(Icons.lock),
-                      suffixIcon: IconButton(
-                        icon: Icon(
-                          _obscurePassword
-                              ? Icons.visibility_off
-                              : Icons.visibility,
-                        ),
-                        onPressed: () {
-                          setState(() {
-                            _obscurePassword = !_obscurePassword;
-                          });
-                        },
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 30),
-
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: _login,
-                      child: const Text("Giriş Yap"),
-                    ),
-                  ),
-
-                  const SizedBox(height: 5),
-
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        "Hesabın yok mu?",
-                        style: Theme.of(context).textTheme.bodyMedium,
-                      ),
-                      TextButton(
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const RegisterPage(),
-                            ),
-                          );
-                        },
-                        child: const Text("Kayıt Ol"),
-                      ),
-                    ],
-                  ),
-                ],
+                ),
               ),
             ),
-          ),
+
+            // --- ALT ALAN (Kavisli Form Kartı) ---
+            Expanded(
+              flex: 6,
+              child: Container(
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: Theme.of(context).cardColor,
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(32),
+                  ),
+                ),
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 28,
+                    vertical: 36,
+                  ),
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Text(
+                          "Giriş Yapın",
+                          style: Theme.of(context)
+                              .textTheme
+                              .headlineLarge
+                              ?.copyWith(
+                                fontSize: 30,
+                                fontWeight: FontWeight.bold,
+                              ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          "Devam etmek için bilgilerinizi girin.",
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
+                        const SizedBox(height: 28),
+
+                        // KULLANICI ADI
+                        TextFormField(
+                          controller: _usernameController,
+                          validator: _validateUsername,
+                          decoration: const InputDecoration(
+                            labelText: "Kullanıcı Adı",
+                            prefixIcon: Icon(Icons.person),
+                          ),
+                        ),
+
+                        const SizedBox(height: 16),
+
+                        // ŞİFRE
+                        TextFormField(
+                          controller: _passwordController,
+                          obscureText: _obscurePassword,
+                          validator: _validatePassword,
+                          decoration: InputDecoration(
+                            labelText: "Şifre",
+                            prefixIcon: const Icon(Icons.lock),
+                            suffixIcon: IconButton(
+                              icon: Icon(
+                                _obscurePassword
+                                    ? Icons.visibility_off_outlined
+                                    : Icons.visibility_outlined,
+                              ),
+                              onPressed: () {
+                                setState(() {
+                                  _obscurePassword = !_obscurePassword;
+                                });
+                              },
+                            ),
+                          ),
+                        ),
+
+                        const SizedBox(height: 32),
+
+                        // GİRİŞ BUTONU
+                        ElevatedButton(
+                          onPressed: _login,
+                          child: const Text("Giriş Yap"),
+                        ),
+
+                        const SizedBox(height: 16),
+
+                        // REGISTER LİNKİ
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              "Hesabın yok mu?",
+                              style: Theme.of(context).textTheme.bodyMedium,
+                            ),
+                            TextButton(
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => const RegisterPage(),
+                                  ),
+                                );
+                              },
+                              child: const Text("Kayıt Ol"),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );

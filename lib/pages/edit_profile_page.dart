@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
-import 'package:stajapp/themes/tema1.dart';
 
 class DateInputFormatter extends TextInputFormatter {
   @override
@@ -87,7 +86,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
   @override
   Widget build(BuildContext context) {
-    final onSurface = Theme.of(context).colorScheme.onSurface;
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,

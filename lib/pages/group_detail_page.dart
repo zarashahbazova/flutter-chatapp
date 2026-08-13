@@ -333,8 +333,147 @@ class _GroupDetailPageState extends State<GroupDetailPage> {
     );
   }
 
-  // --- GRUPTAN AYRILMA ONAYI ---
-  void _showLeaveGroupDialog() {
+  void _showSelectNewAdminDialog() {
+    // Kendisi dışındaki kullanıcıları alıyoruz.
+    final otherParticipants = currentParticipants
+        .where((p) => p["id"].toString() != widget.currentUserId.toString())
+        .toList();
+
+    if (otherParticipants.isEmpty) {
+      AppTheme.showSnackBar(
+        context,
+        message: "Grupta sizden başka üye olmadığı için ayrılamazsınız.",
+        isError: true,
+      );
+      return;
+    }
+
+    dynamic selectedUser;
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              backgroundColor: Theme.of(context).colorScheme.surface,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              title: const Text(
+                "Yeni Yönetici Seç",
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    "Gruptan ayrılmadan önce başka bir üyeyi yeni yönetici olarak seçmelisiniz.",
+                  ),
+                  const SizedBox(height: 16),
+
+                  SizedBox(
+                    width: MediaQuery.of(context).size.width * 0.75,
+                    height: 300,
+                    child: ListView.separated(
+                      itemCount: otherParticipants.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 4),
+                      itemBuilder: (context, index) {
+                        final user = otherParticipants[index];
+
+                        final userId = user["id"];
+
+                        final name =
+                            user["full_name"] ??
+                            user["user_name"] ??
+                            "Kullanıcı";
+
+                        final username = user["user_name"] ?? "";
+
+                        final isSelected =
+                            selectedUser != null &&
+                            selectedUser["id"].toString() == userId.toString();
+
+                        return ListTile(
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          selected: isSelected,
+                          selectedTileColor: AppTheme.primaryNavy.withAlpha(20),
+
+                          leading: CircleAvatar(
+                            backgroundColor: AppTheme.primaryNavy.withAlpha(30),
+                            child: Text(
+                              name.toString().isNotEmpty
+                                  ? name.toString()[0].toUpperCase()
+                                  : "?",
+                              style: const TextStyle(
+                                color: AppTheme.primaryNavy,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+
+                          title: Text(
+                            name.toString(),
+                            style: const TextStyle(fontWeight: FontWeight.w600),
+                          ),
+
+                          subtitle: Text("@$username"),
+
+                          trailing: Icon(
+                            isSelected
+                                ? Icons.check_circle_rounded
+                                : Icons.radio_button_unchecked,
+                            color: isSelected
+                                ? AppTheme.primaryNavy
+                                : Colors.grey,
+                          ),
+
+                          onTap: () {
+                            setDialogState(() {
+                              selectedUser = user;
+                            });
+                          },
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(dialogContext),
+                  child: const Text("İptal"),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.redAccent,
+                    foregroundColor: Colors.white,
+                  ),
+                  onPressed: selectedUser == null
+                      ? null
+                      : () {
+                          Navigator.pop(dialogContext);
+
+                          _showConfirmLeaveWithNewAdminDialog(selectedUser);
+                        },
+                  child: const Text("Devam Et"),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _showConfirmLeaveWithNewAdminDialog(dynamic selectedUser) {
+    final name =
+        selectedUser["full_name"] ?? selectedUser["user_name"] ?? "Kullanıcı";
+
+    final userId = selectedUser["id"];
+
     showDialog(
       context: context,
       builder: (dialogContext) {
@@ -347,8 +486,8 @@ class _GroupDetailPageState extends State<GroupDetailPage> {
             "Gruptan Ayrıl",
             style: TextStyle(fontWeight: FontWeight.bold),
           ),
-          content: const Text(
-            "Bu gruptan ayrılmak istediğinize emin misiniz? Mesajları tekrar göremezsiniz.",
+          content: Text(
+            "$name yeni yönetici olarak atanacak ve siz gruptan ayrılacaksınız. Devam etmek istiyor musunuz?",
           ),
           actions: [
             TextButton(
@@ -362,6 +501,101 @@ class _GroupDetailPageState extends State<GroupDetailPage> {
               ),
               onPressed: () async {
                 Navigator.pop(dialogContext);
+
+                try {
+                  final res = await api.leaveGroup(
+                    token: widget.token,
+                    roomId: widget.roomId,
+                    userId: widget.currentUserId,
+
+                    // BURASI BACKEND'DEKİ GERÇEK PARAMETREYE
+                    // GÖRE AYARLANACAK.
+                    newAdminId: int.parse(userId.toString()),
+                  );
+
+                  if (res.statusCode == 200 && mounted) {
+                    Navigator.pop(context);
+                    Navigator.pop(context);
+
+                    AppTheme.showSnackBar(
+                      context,
+                      message: "Yeni yönetici atandı ve gruptan ayrıldınız.",
+                      isError: false,
+                    );
+                  } else {
+                    String errorMsg =
+                        "Gruptan ayrılamadınız (${res.statusCode}).";
+
+                    try {
+                      final data = jsonDecode(res.body);
+
+                      if (data["error"] != null) {
+                        errorMsg = data["error"].toString();
+                      }
+                    } catch (_) {}
+
+                    if (mounted) {
+                      AppTheme.showSnackBar(
+                        context,
+                        message: errorMsg,
+                        isError: true,
+                      );
+                    }
+                  }
+                } catch (e) {
+                  if (mounted) {
+                    AppTheme.showSnackBar(
+                      context,
+                      message: "Ayrılırken hata oluştu: $e",
+                      isError: true,
+                    );
+                  }
+                }
+              },
+              child: const Text("Ayrıl"),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // --- GRUPTAN AYRILMA ONAYI ---
+  void _showLeaveGroupDialog() {
+    if (isAdmin) {
+      _showSelectNewAdminDialog();
+      return;
+    }
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          backgroundColor: Theme.of(context).colorScheme.surface,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: const Text(
+            "Gruptan Ayrıl",
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          content: const Text(
+            "Bu gruptan ayrılmak istediğinize emin misiniz? "
+            "Mesajları tekrar göremezsiniz.",
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text("İptal"),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.redAccent,
+                foregroundColor: Colors.white,
+              ),
+              onPressed: () async {
+                Navigator.pop(dialogContext);
+
                 try {
                   final res = await api.leaveGroup(
                     token: widget.token,
@@ -370,8 +604,9 @@ class _GroupDetailPageState extends State<GroupDetailPage> {
                   );
 
                   if (res.statusCode == 200 && mounted) {
-                    Navigator.pop(context); // Grup detayını kapat
-                    Navigator.pop(context); // Chat sayfasından çık
+                    Navigator.pop(context);
+                    Navigator.pop(context);
+
                     AppTheme.showSnackBar(
                       context,
                       message: "Gruptan ayrıldınız.",
@@ -380,9 +615,13 @@ class _GroupDetailPageState extends State<GroupDetailPage> {
                   } else {
                     String errorMsg =
                         "Gruptan ayrılamadınız (${res.statusCode}).";
+
                     try {
                       final data = jsonDecode(res.body);
-                      if (data["error"] != null) errorMsg = data["error"];
+
+                      if (data["error"] != null) {
+                        errorMsg = data["error"].toString();
+                      }
                     } catch (_) {}
 
                     if (mounted) {
@@ -1022,10 +1261,12 @@ class _GroupDetailPageState extends State<GroupDetailPage> {
                                       index: index,
                                     );
                                   } else if (value == "profile") {
-                                    showDialog(
-                                      context: context,
-                                      builder: (_) =>
-                                          UserProfileDialog(user: p),
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) =>
+                                            UserProfileDialog(user: p),
+                                      ),
                                     );
                                   }
                                 },

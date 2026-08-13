@@ -47,8 +47,10 @@ class _ChatsPageState extends State<ChatsPage> {
   List<Map<String, dynamic>> messages = [];
   bool isLoading = true;
   bool isSendingImage = false;
+  List<dynamic> groupParticipants = [];
   Timer? _messagesTimer;
   StreamSubscription<RemoteMessage>? _fcmSubscription;
+  final Set<String> _expandedMessages = {};
 
   void _scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -65,6 +67,10 @@ class _ChatsPageState extends State<ChatsPage> {
   @override
   void initState() {
     super.initState();
+
+    if (widget.isGroup && widget.participants != null) {
+      groupParticipants = List<dynamic>.from(widget.participants);
+    }
 
     loadMessages();
     _setupFCMListener();
@@ -237,44 +243,109 @@ class _ChatsPageState extends State<ChatsPage> {
     });
   }
 
-  // --- GRUP DETAY SAYFASINA YÖNLENDİRME (DÜZELTİLDİ) ---
-  // --- HEADER TIKLANDIĞINDA (Grup Detay / Bireysel Profil) ---
-  // --- HEADER TIKLANDIĞINDA (Grup Detay / Bireysel Profil) ---
-  void _navigateToGroupDetail() {
-    if (widget.isGroup) {
-      if (widget.participants == null || token == null || currentUserId == null)
-        return;
+  Future<void> _loadGroupDetailsAndNavigate() async {
+    if (token == null || currentUserId == null) return;
 
-      final List participantsList = widget.participants as List;
+    try {
+      final response = await api.rooms(token: token!, userId: currentUserId!);
+
+      if (response.statusCode != 200) {
+        return;
+      }
+
+      final data = jsonDecode(response.body);
+      final List rooms = data["data"]["rooms"] ?? [];
+
+      final room = rooms.firstWhere(
+        (r) => r["room_id"].toString() == widget.roomId.toString(),
+        orElse: () => null,
+      );
+
+      if (room == null || !mounted) return;
+
+      final List participants = List<dynamic>.from(room["participants"] ?? []);
+
+      final String? groupPhotoUrl = room["display_photo"];
+
+      final String? roomDesc = room["display_description"];
+
+      final int adminId =
+          int.tryParse(room["admin_id"]?.toString() ?? "") ?? widget.adminId;
 
       Navigator.push(
         context,
         MaterialPageRoute(
           builder: (_) => GroupDetailPage(
-            roomName: widget.userName,
-            roomDesc:
-                widget.roomDesc, // 👈 BURAYA DİKKAT: AÇIKLAMAYI AKTARIYORUZ
+            roomName: room["display_name"] ?? widget.userName,
+            roomDesc: roomDesc,
             roomId: widget.roomId,
-            groupPhotoUrl: widget.userPhotoUrl,
-            adminId: widget.adminId,
+            groupPhotoUrl: groupPhotoUrl,
+            adminId: adminId,
             currentUserId: currentUserId!,
-            participants: participantsList,
+            participants: participants,
             token: token!,
           ),
         ),
-      ).then((_) => loadMessages());
+      );
+    } catch (e) {
+      debugPrint("Grup bilgileri alınırken hata: $e");
+    }
+  }
+
+  Future<void> _loadGroupInfo() async {
+    if (!widget.isGroup || token == null || currentUserId == null) {
+      return;
+    }
+
+    try {
+      final response = await api.rooms(token: token!, userId: currentUserId!);
+
+      if (response.statusCode != 200 || !mounted) {
+        return;
+      }
+
+      final data = jsonDecode(response.body);
+      final List rooms = data["data"]["rooms"] ?? [];
+
+      final room = rooms.firstWhere(
+        (r) => r["room_id"].toString() == widget.roomId.toString(),
+        orElse: () => null,
+      );
+
+      if (room == null) return;
+
+      setState(() {
+        groupParticipants = List<dynamic>.from(room["participants"] ?? []);
+      });
+    } catch (e) {
+      debugPrint("Grup bilgileri alınamadı: $e");
+    }
+  }
+
+  // --- GRUP DETAY SAYFASINA YÖNLENDİRME (DÜZELTİLDİ) ---
+  // --- HEADER TIKLANDIĞINDA (Grup Detay / Bireysel Profil) ---
+  // --- HEADER TIKLANDIĞINDA (Grup Detay / Bireysel Profil) ---
+  void _navigateToGroupDetail() {
+    if (widget.isGroup) {
+      _loadGroupDetailsAndNavigate();
     } else {
-      showDialog(
-        context: context,
-        builder: (_) => UserProfileDialog(
-          user: {
-            "full_name": widget.userName,
-            "user_name": widget.userName,
-            "profile_photo": widget.userPhotoUrl,
-          },
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => UserProfileDialog(
+            user: {
+              "full_name": widget.userName,
+              "user_name": widget.userName,
+              "profile_photo": widget.userPhotoUrl,
+            },
+          ),
         ),
       );
     }
+  }
+
+  String _messageKey(Map<String, dynamic> message, int index) {
+    return "${message["sender_id"]}_${message["timestamp"]}_$index";
   }
 
   String _formatTime(dynamic timestamp) {
@@ -324,6 +395,9 @@ class _ChatsPageState extends State<ChatsPage> {
           messages = List<Map<String, dynamic>>.from(json["data"]["messages"]);
           isLoading = false;
         });
+        if (widget.isGroup) {
+          await _loadGroupInfo();
+        }
         _scrollToBottom();
       }
     } catch (e) {
@@ -747,6 +821,23 @@ class _ChatsPageState extends State<ChatsPage> {
                           (imageUrl != null && imageUrl.isNotEmpty)
                           ? "${ApiClient.baseUrl}${imageUrl.startsWith('/') ? imageUrl : '/$imageUrl'}"
                           : null;
+                      final String messageText =
+                          message["message"]?.toString() ?? "";
+
+                      const int maxMessageCharacters = 300;
+
+                      final bool isLongMessage =
+                          messageText.length > maxMessageCharacters;
+
+                      final String messageKey = _messageKey(message, index);
+
+                      final bool isExpanded = _expandedMessages.contains(
+                        messageKey,
+                      );
+
+                      final String displayedText = isLongMessage && !isExpanded
+                          ? messageText.substring(0, maxMessageCharacters)
+                          : messageText;
                       return Align(
                         alignment: me
                             ? Alignment.centerRight
@@ -842,48 +933,92 @@ class _ChatsPageState extends State<ChatsPage> {
                                 ),
                                 const SizedBox(height: 6),
                               ],
-
                               // --- 2. MESAJ METNİ VE SAAT HİZALAMASI ---
-                              Row(
-                                mainAxisSize: MainAxisSize.min,
-                                mainAxisAlignment: MainAxisAlignment.end,
-                                crossAxisAlignment: CrossAxisAlignment.end,
-                                children: [
-                                  if (message["message"] != null &&
-                                      message["message"]
-                                          .toString()
-                                          .trim()
-                                          .isNotEmpty)
-                                    Flexible(
-                                      child: Padding(
-                                        padding: const EdgeInsets.only(
-                                          right: 8.0,
+                              if (messageText.trim().isNotEmpty)
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Row(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.end,
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Flexible(
+                                          child: Text(
+                                            displayedText,
+                                            style: TextStyle(
+                                              fontSize: 15,
+                                              height: 1.3,
+                                              color: me
+                                                  ? Colors.white
+                                                  : onSurfaceColor,
+                                            ),
+                                          ),
                                         ),
-                                        child: Text(
-                                          message["message"]?.toString() ?? "",
-                                          style: TextStyle(
-                                            fontSize: 15,
-                                            height: 1.3,
-                                            color: me
-                                                ? Colors.white
-                                                : onSurfaceColor,
+
+                                        const SizedBox(width: 8),
+
+                                        if (formattedTime.isNotEmpty)
+                                          Text(
+                                            formattedTime,
+                                            style: TextStyle(
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w400,
+                                              color: me
+                                                  ? Colors.white.withAlpha(180)
+                                                  : onSurfaceColor.withAlpha(
+                                                      120,
+                                                    ),
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+
+                                    if (isLongMessage)
+                                      Align(
+                                        alignment: Alignment.centerLeft,
+                                        child: TextButton(
+                                          onPressed: () {
+                                            setState(() {
+                                              if (isExpanded) {
+                                                _expandedMessages.remove(
+                                                  messageKey,
+                                                );
+                                              } else {
+                                                _expandedMessages.add(
+                                                  messageKey,
+                                                );
+                                              }
+                                            });
+                                          },
+                                          style: TextButton.styleFrom(
+                                            padding: EdgeInsets.zero,
+                                            minimumSize: const Size(0, 30),
+                                            tapTargetSize: MaterialTapTargetSize
+                                                .shrinkWrap,
+                                          ),
+                                          child: Text(
+                                            isExpanded
+                                                ? "Daha az göster"
+                                                : "Devam et",
+                                            style: TextStyle(
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.w600,
+                                              color: me
+                                                  ? Colors.white
+                                                  : const Color.fromARGB(
+                                                      255,
+                                                      118,
+                                                      99,
+                                                      148,
+                                                    ),
+                                            ),
                                           ),
                                         ),
                                       ),
-                                    ),
-                                  if (formattedTime.isNotEmpty)
-                                    Text(
-                                      formattedTime,
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w400,
-                                        color: me
-                                            ? Colors.white.withAlpha(180)
-                                            : onSurfaceColor.withAlpha(120),
-                                      ),
-                                    ),
-                                ],
-                              ),
+                                  ],
+                                ),
                             ],
                           ),
                         ),

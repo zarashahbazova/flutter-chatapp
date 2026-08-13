@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class ApiClient {
-  static const String baseUrl = "http://192.168.60.48:3000";
+  static const String baseUrl = "http://192.168.60.40:3000";
 
   Future<http.Response> post({
     required String url,
@@ -270,11 +270,7 @@ class ApiClient {
     return await post(
       url: 'chat/add-participant',
       token: token,
-      body: {
-        'room_id': roomId,
-        'admin_id': adminId,
-        'username': username,
-      },
+      body: {'room_id': roomId, 'admin_id': adminId, 'username': username},
     );
   }
 
@@ -283,6 +279,7 @@ class ApiClient {
     required String token,
     required int roomId,
     required int userId,
+    int? newAdminId,
   }) async {
     return await put(
       url: 'chat/leave-group',
@@ -290,6 +287,7 @@ class ApiClient {
       body: {
         'room_id': roomId,
         'user_id': userId,
+        if (newAdminId != null) 'new_admin_id': newAdminId,
       },
     );
   }

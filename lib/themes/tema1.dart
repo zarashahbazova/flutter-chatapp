@@ -1,82 +1,37 @@
 import 'package:flutter/material.dart';
 
 class AppTheme {
-  static const Color primaryNavy = Color.fromARGB(
-    255,
-    38,
-    27,
-    58,
-  ); // Mesaj balonu & Buton Laciverti
-  static const Color darkNavy = Color.fromARGB(255, 0, 0, 0); // Koyu Başlık Laciverti
-  static const Color secondaryNavy = Color.fromARGB(
-    255,
-    61,
-    47,
-    84,
-  ); // Gradient İkinci Tonu
-  static const Color backgroundColor = Color.fromARGB(
-    255,
-    251,
-    252,
-    252,
-  ); // Sayfa Zemin Rengi
-  static const Color surfaceColor = Color(
-    0xFFFFFFFF,
-  ); // Kart ve Input Dolgu Rengi
-  static const Color textColor = Color.fromARGB(
-    255,
-    0,
-    0,
-    0,
-  ); // Koyu Metin Rengi
-  static const Color subtitleColor = Color.fromARGB(
-    255,
-    49,
-    38,
-    68,
-  ); // İkincil Metin Rengi
-  static const Color hintColor = Color.fromARGB(
-    255,
-    151,
-    140,
-    179,
-  ); // İpucu Metin Rengi
+  // --- Yeni Ana Renk Tanımı ---
+  // Renginiz: #C0BBC8 (Soft Lila/Gri Nötr)
+  static const Color brandColor = Color.fromARGB(255, 178, 181, 255);
+
+  // Değişken isimleri ve imzaları birebir korundu
+  static const Color primaryNavy = Color.fromARGB(255, 96, 106, 171); // Ana Vurgu / Butonlar - Koyu Antrasit/Kömür
+  static const Color darkNavy = Color(0xFF19181B); // Başlık/İkon - Siyah
+  static const Color secondaryNavy = Color.fromARGB(255, 104, 102, 179); // İkincil Ton - #C0BBC8
+
+  static const Color backgroundColor = Color(0xFFF7F6F8); // Sayfa Zemin Rengi - Çok Hafif Soft Gri
+  static const Color surfaceColor = Color(0xFFFFFFFF); // Kart ve Input Dolgu Rengi - Beyaz
+
+  static const Color textColor = Color(0xFF19181B); // Ana Metin - Siyah/Koyu Antrasit
+  static const Color subtitleColor = Color.fromARGB(255, 127, 136, 194); // İkincil Metin - Nötr Gri
+  static const Color hintColor = Color(0xFFA29EA8); // İpucu Metni - Açık Gri
 
   // Dark Mode Renkleri
-  static const Color darkBackgroundColor = Color.fromARGB(
-    255,
-    1,
-    6,
-    12,
-  ); // Derin Gece Mavisi Zemin
-  static const Color darkSurfaceColor = Color.fromARGB(
-    255,
-    30,
-    27,
-    41,
-  ); // Koyu Kart ve Input Rengi
-  static const Color darkTextColor = Color(0xFFF8FAFC); // Açık Renk Metin
-  static const Color darkSubtitleColor = Color.fromARGB(
-    255,
-    52,
-    43,
-    61,
-  ); // İkincil Metin Rengi
-  static const Color darkAccentBlue = Color.fromARGB(
-    255,
-    49,
-    38,
-    68,
-  ); // Canlı Açık Mavi Vurgu
-  static const Color darkpurple2 = Color.fromARGB(255, 53, 43, 71); 
-  // Efektler & Cam (Glassmorphism) Detayları
-  static const Color shadow = Color.fromARGB(255, 67, 50, 96);
+  static const Color darkBackgroundColor = Color(0xFF121114); // Derin Koyu Zemin
+  static const Color darkSurfaceColor = Color(0xFF1D1C21); // Koyu Kart / Input Rengi
+  static const Color darkTextColor = Color(0xFFF2F1F4); // Ana Metin - Açık Krem/Beyaz
+  static const Color darkSubtitleColor = Color(0xFFA29EA8); // İkincil Metin - Açık Gri
+  static const Color darkAccentBlue = brandColor; // Koyu Mod Vurgu - #C0BBC8 (Eski Accent yerine)
+  static const Color darkpurple2 = Color(0xFF2C2A31); // Ayırıcı / Kenarlık Rengi
+
+  // Efekt Rengi
+  static const Color shadow = Color(0x0D000000);
 
   // Ortak Uyarı ve Hata Renkleri
   static const Color errorColor = Color(0xFFEF4444); // Kırmızımsı Hata Rengi
   static const Color successColor = Color(0xFF10B981); // Başarı Rengi
-  static const Color infoColor =
-      primaryNavy; // Yönlendirme ve Normal Bildirimler
+  static const Color infoColor = primaryNavy; // Yönlendirme ve Normal Bildirimler
 
   // Tipografi Boyutları
   static const double headlineFont1 = 34;
@@ -86,7 +41,7 @@ class AppTheme {
   static const double smallFont = 16;
   static const double inputFont = 14;
 
-  // SnackBar Yardımcısı (Hatalar Kırmızımsı, Yönlendirmeler Lacivert/Mavi)
+  // SnackBar Yardımcısı
   static void showSnackBar(
     BuildContext context, {
     required String message,
@@ -98,17 +53,17 @@ class AppTheme {
       SnackBar(
         content: Text(
           message,
-          style: const TextStyle(
-            color: Colors.white,
+          style: TextStyle(
+            color: isError ? Colors.white : (isDark ? darkBackgroundColor : Colors.white),
             fontWeight: FontWeight.w600,
           ),
         ),
         backgroundColor: isError
             ? errorColor
-            : (isDark ? darkAccentBlue : infoColor),
+            : (isDark ? darkAccentBlue : primaryNavy),
         behavior: SnackBarBehavior.floating,
-        elevation: 4,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        elevation: 2,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
     );
   }
@@ -122,7 +77,7 @@ class AppTheme {
       colorScheme: ColorScheme.fromSeed(
         seedColor: primaryNavy,
         primary: primaryNavy,
-        secondary: const Color.fromARGB(255, 53, 44, 69),
+        secondary: secondaryNavy,
         surface: surfaceColor,
         onSurface: textColor,
         brightness: Brightness.light,
@@ -137,7 +92,7 @@ class AppTheme {
         titleTextStyle: TextStyle(
           color: darkNavy,
           fontSize: 20,
-          fontWeight: FontWeight.bold,
+          fontWeight: FontWeight.w700,
         ),
       ),
 
@@ -146,7 +101,7 @@ class AppTheme {
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
           foregroundColor: primaryNavy,
-          textStyle: const TextStyle(fontWeight: FontWeight.bold),
+          textStyle: const TextStyle(fontWeight: FontWeight.w600),
         ),
       ),
 
@@ -155,7 +110,7 @@ class AppTheme {
           backgroundColor: primaryNavy,
           foregroundColor: Colors.white,
           minimumSize: const Size(double.infinity, 52),
-          elevation: 2,
+          elevation: 0,
           shadowColor: shadow,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),
@@ -163,7 +118,7 @@ class AppTheme {
           textStyle: const TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w600,
-            letterSpacing: 0.5,
+            letterSpacing: 0.3,
           ),
         ),
       ),
@@ -172,7 +127,7 @@ class AppTheme {
         prefixIconColor: subtitleColor,
         suffixIconColor: subtitleColor,
         filled: true,
-        fillColor: const Color.fromARGB(255, 250, 249, 253),
+        fillColor: const Color(0xFFF0EFF2), // Hafif #C0BBC8 esintili açık input dolgusu
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 16,
           vertical: 16,
@@ -180,24 +135,17 @@ class AppTheme {
 
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(
-            color: Color.fromARGB(159, 232, 226, 240),
-          ),
+          borderSide: const BorderSide(color: Color(0xFFE2DFE7)),
         ),
 
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(
-            color: Color.fromARGB(202, 213, 203, 225),
-          ),
+          borderSide: const BorderSide(color: Color(0xFFE2DFE7)),
         ),
 
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(
-            color: Color.fromARGB(208, 82, 79, 110),
-            width: 2,
-          ),
+          borderSide: const BorderSide(color: primaryNavy, width: 1.6),
         ),
 
         errorBorder: OutlineInputBorder(
@@ -210,12 +158,12 @@ class AppTheme {
         headlineLarge: TextStyle(
           fontSize: headlineFont1,
           fontWeight: FontWeight.bold,
-          color: Color.fromARGB(255, 0, 0, 0),
+          color: textColor,
         ),
         headlineMedium: TextStyle(
           fontSize: mediumFont,
           fontWeight: FontWeight.bold,
-          color: Color.fromARGB(255, 0, 0, 0),
+          color: textColor,
         ),
         bodyLarge: TextStyle(fontSize: smallFont, color: textColor),
         bodyMedium: TextStyle(fontSize: inputFont, color: subtitleColor),
@@ -227,13 +175,13 @@ class AppTheme {
   static ThemeData get darkTheme {
     return ThemeData(
       useMaterial3: true,
-      scaffoldBackgroundColor: const Color.fromARGB(255, 2, 1, 7),
+      scaffoldBackgroundColor: darkBackgroundColor,
 
       colorScheme: ColorScheme.fromSeed(
         seedColor: darkAccentBlue,
-        primary: darkAccentBlue,
+        primary: const Color.fromARGB(225, 96, 106, 171),
         secondary: secondaryNavy,
-        surface: const Color.fromARGB(255, 20, 17, 26),
+        surface: const Color.fromARGB(255, 16, 15, 18),
         onSurface: darkTextColor,
         brightness: Brightness.dark,
       ),
@@ -247,7 +195,7 @@ class AppTheme {
         titleTextStyle: TextStyle(
           color: darkTextColor,
           fontSize: 20,
-          fontWeight: FontWeight.bold,
+          fontWeight: FontWeight.w700,
         ),
       ),
 
@@ -256,24 +204,24 @@ class AppTheme {
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
           foregroundColor: darkAccentBlue,
-          textStyle: const TextStyle(fontWeight: FontWeight.bold),
+          textStyle: const TextStyle(fontWeight: FontWeight.w600),
         ),
       ),
 
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: const Color.fromARGB(255, 52, 40, 75),
-          foregroundColor: Colors.white,
+          backgroundColor: primaryNavy, // Koyu modda #C0BBC8 öne çıkan buton
+          foregroundColor: darkBackgroundColor, // Yazı rengi koyu
           minimumSize: const Size(double.infinity, 52),
-          elevation: 4,
+          elevation: 0,
           shadowColor: Colors.black45,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),
           ),
           textStyle: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-            letterSpacing: 0.5,
+            fontSize: 17,
+            fontWeight: FontWeight.w500,
+            letterSpacing: 0.3,
           ),
         ),
       ),
@@ -282,7 +230,7 @@ class AppTheme {
         prefixIconColor: darkSubtitleColor,
         suffixIconColor: darkSubtitleColor,
         filled: true,
-        fillColor: const Color.fromARGB(255, 7, 5, 12),
+        fillColor: darkSurfaceColor,
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 16,
           vertical: 16,
@@ -290,17 +238,17 @@ class AppTheme {
 
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: Color.fromARGB(255, 39, 30, 59)),
+          borderSide: const BorderSide(color: darkpurple2),
         ),
 
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: Color.fromARGB(255, 26, 19, 31)),
+          borderSide: const BorderSide(color: darkpurple2),
         ),
 
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: darkAccentBlue, width: 2),
+          borderSide: const BorderSide(color: darkAccentBlue, width: 1.6),
         ),
 
         errorBorder: OutlineInputBorder(
@@ -321,10 +269,7 @@ class AppTheme {
           color: darkTextColor,
         ),
         bodyLarge: TextStyle(fontSize: smallFont, color: darkTextColor),
-        bodyMedium: TextStyle(
-          fontSize: inputFont,
-          color: Color.fromARGB(255, 219, 218, 220),
-        ),
+        bodyMedium: TextStyle(fontSize: inputFont, color: darkSubtitleColor),
       ),
     );
   }

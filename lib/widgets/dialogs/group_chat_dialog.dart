@@ -90,7 +90,7 @@ class _GroupChatDialogState extends State<GroupChatDialog> {
         insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
         title: const Row(
           children: [
-            Icon(Icons.groups_rounded, color: AppTheme.darkpurple2),
+            Icon(Icons.groups_rounded, color: AppTheme.primaryNavy),
             SizedBox(width: 8),
             Text(
               "Yeni Grup Oluştur",
