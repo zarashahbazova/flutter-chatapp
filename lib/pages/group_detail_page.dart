@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
@@ -973,17 +974,41 @@ Future<void> _pickAndUploadGroupPhoto() async { //grup fotosu secip backende gö
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      appBar: AppBar(
-        title: const Text(
-          "Grup Bilgisi",
-          style: TextStyle(fontWeight: FontWeight.bold),
+      extendBodyBehindAppBar: true,
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(kToolbarHeight),
+        child: ClipRect(
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+            child: Container(
+              decoration: BoxDecoration(
+                color: cardBgColor.withAlpha(200),
+                border: Border(
+                  bottom: BorderSide(
+                    color: onSurfaceColor.withAlpha(12),
+                    width: 1,
+                  ),
+                ),
+              ),
+              child: AppBar(
+                title: const Text(
+                  "Grup Bilgisi",
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                elevation: 0,
+                backgroundColor: Colors.transparent,
+                surfaceTintColor: Colors.transparent,
+              ),
+            ),
+          ),
         ),
-        elevation: 0,
-        backgroundColor: Colors.transparent,
       ),
       body: SingleChildScrollView(
         physics: const BouncingScrollPhysics(),
-        padding: const EdgeInsets.only(bottom: 40),
+        padding: EdgeInsets.only(
+          top: MediaQuery.of(context).padding.top + kToolbarHeight + 10,
+          bottom: 40,
+        ),
         child: Column(
           children: [
             const SizedBox(height: 10),
@@ -995,11 +1020,20 @@ Future<void> _pickAndUploadGroupPhoto() async { //grup fotosu secip backende gö
                   Container(
                     width: 110,
                     height: 110,
-                    decoration: const BoxDecoration(
+                    decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      gradient: LinearGradient(
+                      gradient: const LinearGradient(
                         colors: [AppTheme.primaryNavy, AppTheme.secondaryNavy],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
                       ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppTheme.primaryNavy.withAlpha(50),
+                          blurRadius: 22,
+                          offset: const Offset(0, 10),
+                        ),
+                      ],
                     ),
                     alignment: Alignment.center,
                     child: fullGroupPhotoUrl != null
@@ -1028,9 +1062,32 @@ Future<void> _pickAndUploadGroupPhoto() async { //grup fotosu secip backende gö
                         onTap: isUploadingPhoto
                             ? null
                             : _pickAndUploadGroupPhoto,
-                        child: CircleAvatar(
-                          radius: 18,
-                          backgroundColor: AppTheme.primaryNavy,
+                        child: Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            gradient: const LinearGradient(
+                              colors: [
+                                AppTheme.primaryNavy,
+                                AppTheme.secondaryNavy,
+                              ],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                            border: Border.all(
+                              color: cardBgColor,
+                              width: 3,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppTheme.primaryNavy.withAlpha(70),
+                                blurRadius: 10,
+                                offset: const Offset(0, 3),
+                              ),
+                            ],
+                          ),
+                          alignment: Alignment.center,
                           child: isUploadingPhoto
                               ? const SizedBox(
                                   width: 16,
@@ -1042,7 +1099,7 @@ Future<void> _pickAndUploadGroupPhoto() async { //grup fotosu secip backende gö
                                 )
                               : const Icon(
                                   Icons.camera_alt_rounded,
-                                  size: 18,
+                                  size: 16,
                                   color: Colors.white,
                                 ),
                         ),
@@ -1097,6 +1154,14 @@ Future<void> _pickAndUploadGroupPhoto() async { //grup fotosu secip backende gö
                   color: cardBgColor,
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(color: onSurfaceColor.withAlpha(20)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withAlpha(8),
+                      blurRadius: 16,
+                      spreadRadius: -4,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1130,11 +1195,31 @@ Future<void> _pickAndUploadGroupPhoto() async { //grup fotosu secip backende gö
                     color: cardBgColor,
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(color: onSurfaceColor.withAlpha(20)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withAlpha(8),
+                      blurRadius: 16,
+                      spreadRadius: -4,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
                   ),
                   child: ListTile(
-                    leading: const CircleAvatar(
-                      backgroundColor: AppTheme.primaryNavy,
-                      child: Icon(
+                    leading: Container(
+                      width: 42,
+                      height: 42,
+                      decoration: const BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: LinearGradient(
+                          colors: [
+                            AppTheme.primaryNavy,
+                            AppTheme.secondaryNavy,
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                      ),
+                      child: const Icon(
                         Icons.person_add_rounded,
                         color: Colors.white,
                         size: 20,
@@ -1159,6 +1244,14 @@ Future<void> _pickAndUploadGroupPhoto() async { //grup fotosu secip backende gö
                   color: cardBgColor,
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(color: onSurfaceColor.withAlpha(20)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withAlpha(8),
+                      blurRadius: 16,
+                      spreadRadius: -4,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1214,7 +1307,16 @@ Future<void> _pickAndUploadGroupPhoto() async { //grup fotosu secip backende gö
                             height: 38,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
-                              color: AppTheme.primaryNavy.withAlpha(30),
+                              gradient: fullUserPhotoUrl == null
+                                  ? LinearGradient(
+                                      colors: [
+                                        AppTheme.primaryNavy.withAlpha(190),
+                                        AppTheme.secondaryNavy.withAlpha(190),
+                                      ],
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                    )
+                                  : null,
                             ),
                             child: fullUserPhotoUrl != null
                                 ? ClipOval(
@@ -1227,7 +1329,7 @@ Future<void> _pickAndUploadGroupPhoto() async { //grup fotosu secip backende gö
                                         child: Text(
                                           firstLetter,
                                           style: const TextStyle(
-                                            color: AppTheme.primaryNavy,
+                                            color: Colors.white,
                                             fontWeight: FontWeight.bold,
                                           ),
                                         ),
@@ -1238,7 +1340,7 @@ Future<void> _pickAndUploadGroupPhoto() async { //grup fotosu secip backende gö
                                     child: Text(
                                       firstLetter,
                                       style: const TextStyle(
-                                        color: AppTheme.primaryNavy,
+                                        color: Colors.white,
                                         fontWeight: FontWeight.bold,
                                       ),
                                     ),
@@ -1376,28 +1478,18 @@ Future<void> _pickAndUploadGroupPhoto() async { //grup fotosu secip backende gö
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
                   side: BorderSide(
-                    color: const Color.fromARGB(
-                      255,
-                      165,
-                      127,
-                      125,
-                    ).withAlpha(40),
+                    color: const Color.fromARGB(255, 155, 10, 10).withAlpha(40),
                   ),
                 ),
-                tileColor: const Color.fromARGB(
-                  255,
-                  162,
-                  100,
-                  96,
-                ).withAlpha(15),
+        
                 leading: const Icon(
                   Icons.exit_to_app_rounded,
-                  color: Colors.redAccent,
+                  color: Color.fromARGB(255, 155, 10, 10),
                 ),
                 title: const Text(
                   "Gruptan Ayrıl",
                   style: TextStyle(
-                    color: Color.fromARGB(255, 193, 135, 135),
+                    color: Color.fromARGB(255, 155, 10, 10),
                     fontWeight: FontWeight.bold,
                   ),
                 ),

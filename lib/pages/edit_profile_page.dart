@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
+import 'package:Lafla/services/api_client.dart';
+import 'package:Lafla/themes/tema1.dart';
 
 class DateInputFormatter extends TextInputFormatter {
   @override
@@ -32,6 +35,8 @@ class EditProfilePage extends StatefulWidget {
   final String currentEmail;
   final String currentPhone;
   final String currentBirthDate;
+  final String? currentPhotoUrl;
+  final void Function(ImageSource source)? onPickPhoto;
   final Future<void> Function({
     required String name,
     required String username,
@@ -47,6 +52,8 @@ class EditProfilePage extends StatefulWidget {
     required this.currentEmail,
     required this.currentPhone,
     required this.currentBirthDate,
+    this.currentPhotoUrl,
+    this.onPickPhoto,
     required this.onSave,
   });
 
@@ -84,42 +91,287 @@ class _EditProfilePageState extends State<EditProfilePage> {
     super.dispose();
   }
 
+  void _showImagePickerBottomSheet() {
+    if (widget.onPickPhoto == null) return;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final onSurfaceColor = Theme.of(context).colorScheme.onSurface;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 36,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: onSurfaceColor.withAlpha(40),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                ListTile(
+                  leading: Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: isDark ? const Color(0xFF141316) : const Color(0xFFF3F2F5),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(
+                      Icons.camera_alt_rounded,
+                      color: isDark ? Colors.white70 : const Color(0xFF19181B),
+                      size: 20,
+                    ),
+                  ),
+                  title: const Text(
+                    "Kamera ile Çek",
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  onTap: () {
+                    Navigator.pop(context);
+                    widget.onPickPhoto!(ImageSource.camera);
+                  },
+                ),
+                Divider(
+                  color: onSurfaceColor.withAlpha(isDark ? 16 : 10),
+                  indent: 16,
+                  endIndent: 16,
+                ),
+                ListTile(
+                  leading: Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: isDark ? const Color(0xFF141316) : const Color(0xFFF3F2F5),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(
+                      Icons.photo_library_rounded,
+                      color: isDark ? Colors.white70 : const Color(0xFF19181B),
+                      size: 20,
+                    ),
+                  ),
+                  title: const Text(
+                    "Galeriden Seç",
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  onTap: () {
+                    Navigator.pop(context);
+                    widget.onPickPhoto!(ImageSource.gallery);
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final onSurfaceColor = theme.colorScheme.onSurface;
+    final surfaceColor = isDark ? AppTheme.darkSurfaceColor : AppTheme.surfaceColor;
+    final subColor = isDark ? const Color(0xFF8E8B94) : const Color(0xFF827E8C);
+
+    final String firstLetter = widget.currentName.isNotEmpty
+        ? widget.currentName[0].toUpperCase()
+        : "?";
+
+    final String? fullPhotoUrl =
+        (widget.currentPhotoUrl != null && widget.currentPhotoUrl!.isNotEmpty)
+        ? "${ApiClient.baseUrl}${widget.currentPhotoUrl!.startsWith('/') ? widget.currentPhotoUrl : '/${widget.currentPhotoUrl}'}?v=${DateTime.now().millisecondsSinceEpoch}"
+        : null;
 
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         title: const Text(
           "Profili Düzenle",
-          style: TextStyle(fontWeight: FontWeight.bold),
+          style: TextStyle(
+            fontWeight: FontWeight.w800,
+            fontSize: 19,
+            letterSpacing: -0.3,
+          ),
         ),
+        centerTitle: true,
         elevation: 0,
-        backgroundColor: Colors.transparent,
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
+        physics: const BouncingScrollPhysics(),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
         child: Form(
           key: _formKey,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // 📸 ÜST ALAN (Siyah-Beyaz Temiz Kart)
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: surfaceColor,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: isDark ? const Color(0xFF2C2A31) : const Color(0xFFE8E6ED),
+                    width: 1.1,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withAlpha(isDark ? 50 : 6),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    // Köşeleri yuvarlak kare profil fotoğrafı
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(16),
+                      child: Container(
+                        width: 74,
+                        height: 74,
+                        color: isDark ? const Color(0xFF141316) : const Color(0xFFF3F2F5),
+                        child: fullPhotoUrl != null
+                            ? Image.network(
+                                fullPhotoUrl,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) => Center(
+                                  child: Text(
+                                    firstLetter,
+                                    style: TextStyle(
+                                      fontSize: 26,
+                                      fontWeight: FontWeight.bold,
+                                      color: onSurfaceColor,
+                                    ),
+                                  ),
+                                ),
+                              )
+                            : Center(
+                                child: Text(
+                                  firstLetter,
+                                  style: TextStyle(
+                                    fontSize: 26,
+                                    fontWeight: FontWeight.bold,
+                                    color: onSurfaceColor,
+                                  ),
+                                ),
+                              ),
+                      ),
+                    ),
+
+                    const SizedBox(width: 16),
+
+                    // Fotoğraf değiştirme / Butonlar
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            widget.currentName.isNotEmpty
+                                ? widget.currentName
+                                : "Profil Fotoğrafı",
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              color: onSurfaceColor,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          OutlinedButton.icon(
+                            icon: Icon(
+                              Icons.edit_outlined,
+                              size: 14,
+                              color: isDark ? Colors.white70 : const Color(0xFF19181B),
+                            ),
+                            label: Text(
+                              "Fotoğrafı Değiştir",
+                              style: TextStyle(
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.w600,
+                                color: isDark ? Colors.white : const Color(0xFF19181B),
+                              ),
+                            ),
+                            style: OutlinedButton.styleFrom(
+                              backgroundColor: isDark
+                                  ? Colors.white.withAlpha(6)
+                                  : Colors.black.withAlpha(4),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 6,
+                              ),
+                              minimumSize: Size.zero,
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              side: BorderSide(
+                                color: onSurfaceColor.withAlpha(isDark ? 40 : 25),
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                            ),
+                            onPressed: _showImagePickerBottomSheet,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 24),
+
+              // BİLGİ DÜZENLEME INPUTLARI (Sade & Siyah-Beyaz Uyumlu)
+              Padding(
+                padding: const EdgeInsets.only(left: 4, bottom: 8),
+                child: Text(
+                  "KİŞİSEL BİLGİLER",
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.8,
+                    color: subColor,
+                  ),
+                ),
+              ),
+
               TextFormField(
                 controller: _nameController,
-                decoration: const InputDecoration(
+                style: TextStyle(color: onSurfaceColor),
+                decoration: InputDecoration(
                   labelText: "Ad Soyad",
-                  prefixIcon: Icon(Icons.person_outline_rounded),
+                  prefixIcon: Icon(
+                    Icons.person_outline_rounded,
+                    color: subColor,
+                  ),
                 ),
                 validator: (v) => (v == null || v.trim().isEmpty)
                     ? "Adınızı giriniz."
                     : null,
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 14),
+
               TextFormField(
                 controller: _usernameController,
-                decoration: const InputDecoration(
+                style: TextStyle(color: onSurfaceColor),
+                decoration: InputDecoration(
                   labelText: "Kullanıcı Adı",
-                  prefixIcon: Icon(Icons.alternate_email_rounded),
+                  prefixIcon: Icon(
+                    Icons.alternate_email_rounded,
+                    color: subColor,
+                  ),
                 ),
                 validator: (v) {
                   if (v == null || v.trim().isEmpty) {
@@ -131,13 +383,18 @@ class _EditProfilePageState extends State<EditProfilePage> {
                   return null;
                 },
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 14),
+
               TextFormField(
                 controller: _emailController,
                 keyboardType: TextInputType.emailAddress,
-                decoration: const InputDecoration(
+                style: TextStyle(color: onSurfaceColor),
+                decoration: InputDecoration(
                   labelText: "E-posta",
-                  prefixIcon: Icon(Icons.email_outlined),
+                  prefixIcon: Icon(
+                    Icons.email_outlined,
+                    color: subColor,
+                  ),
                 ),
                 validator: (v) {
                   if (v == null || v.trim().isEmpty) {
@@ -150,15 +407,20 @@ class _EditProfilePageState extends State<EditProfilePage> {
                   return null;
                 },
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 14),
+
               TextFormField(
                 controller: _phoneController,
                 keyboardType: TextInputType.phone,
+                style: TextStyle(color: onSurfaceColor),
                 inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: "Telefon",
                   hintText: "5xxxxxxxxx",
-                  prefixIcon: Icon(Icons.phone_outlined),
+                  prefixIcon: Icon(
+                    Icons.phone_outlined,
+                    color: subColor,
+                  ),
                 ),
                 validator: (v) {
                   if (v == null || v.trim().isEmpty) return null;
@@ -168,18 +430,23 @@ class _EditProfilePageState extends State<EditProfilePage> {
                   return null;
                 },
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 14),
+
               TextFormField(
                 controller: _birthDateController,
                 keyboardType: TextInputType.number,
+                style: TextStyle(color: onSurfaceColor),
                 inputFormatters: [
                   FilteringTextInputFormatter.digitsOnly,
                   DateInputFormatter(),
                 ],
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: "Doğum Tarihi",
                   hintText: "gg-aa-yyyy",
-                  prefixIcon: Icon(Icons.cake_outlined),
+                  prefixIcon: Icon(
+                    Icons.cake_outlined,
+                    color: subColor,
+                  ),
                 ),
                 validator: (v) {
                   if (v == null || v.trim().isEmpty) return null;
@@ -191,16 +458,24 @@ class _EditProfilePageState extends State<EditProfilePage> {
                   return null;
                 },
               ),
+
               const SizedBox(height: 32),
+
+              // KAYDET BUTONU (Siyah-Beyaz Yüksek Kontrast)
               SizedBox(
                 width: double.infinity,
-                height: 52,
+                height: 50,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Theme.of(context).colorScheme.primary,
-                    foregroundColor: Colors.white,
+                    backgroundColor: isDark
+                        ? const Color(0xFFF2F1F4)
+                        : const Color(0xFF19181B),
+                    foregroundColor: isDark
+                        ? const Color(0xFF121114)
+                        : Colors.white,
+                    elevation: 0,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(14),
                     ),
                   ),
                   onPressed: _isSaving
@@ -219,23 +494,27 @@ class _EditProfilePageState extends State<EditProfilePage> {
                           }
                         },
                   child: _isSaving
-                      ? const SizedBox(
+                      ? SizedBox(
                           width: 22,
                           height: 22,
                           child: CircularProgressIndicator(
-                            color: Colors.white,
-                            strokeWidth: 2,
+                            strokeWidth: 2.2,
+                            color: isDark
+                                ? const Color(0xFF121114)
+                                : Colors.white,
                           ),
                         )
                       : const Text(
                           "Bilgileri Kaydet",
                           style: TextStyle(
-                            fontSize: 16,
+                            fontSize: 15,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
                 ),
               ),
+
+              const SizedBox(height: 40),
             ],
           ),
         ),

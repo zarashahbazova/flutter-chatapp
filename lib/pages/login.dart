@@ -1,3 +1,4 @@
+import 'package:Lafla/pages/forgot_password.dart';
 import 'package:flutter/material.dart';
 import 'package:Lafla/pages/messages_page.dart';
 import 'package:Lafla/themes/tema1.dart';
@@ -23,6 +24,7 @@ class _LoginPageState extends State<LoginPage> {
   final ApiClient api = ApiClient();
 
   bool _obscurePassword = true;
+  bool _isLoggingIn = false;
   bool _rememberMe = false;
   Future<void> _loadSavedLogin() async {
     final prefs = await SharedPreferences.getInstance();
@@ -71,11 +73,16 @@ class _LoginPageState extends State<LoginPage> {
     }
     return null;
   }
+Future<void> _login() async {
+  if (_isLoggingIn) return;
 
-  Future<void> _login() async {
-    if (!_formKey.currentState!.validate()) return;
+  if (!_formKey.currentState!.validate()) return;
 
-    try {
+  setState(() {
+    _isLoggingIn = true;
+  });
+
+  try {
       final response = await api.login({
         "user_name": _usernameController.text.trim(),
         "password": _passwordController.text,
@@ -282,22 +289,43 @@ class _LoginPageState extends State<LoginPage> {
                           ),
                         ),
 
-                        const SizedBox(height: 32),
+                        const SizedBox(height: 8),
                         Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
-                            Checkbox(
-                              value: _rememberMe,
-                              onChanged: (value) {
-                                setState(() {
-                                  _rememberMe = value ?? false;
-                                });
-                              },
+                            // BENİ HATIRLA
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Checkbox(
+                                  value: _rememberMe,
+                                  onChanged: (value) {
+                                    setState(() {
+                                      _rememberMe = value ?? false;
+                                    });
+                                  },
+                                ),
+                                const Text("Beni Hatırla"),
+                              ],
                             ),
-                            const Text("Beni Hatırla"),
+
+                            TextButton(
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => const ForgotPasswordPage(),
+                                  ),
+                                );
+                              },
+                              child: const Text("Şifreni mi unuttun?"),
+                            ),
                           ],
                         ),
 
                         const SizedBox(height: 16),
+
                         // GİRİŞ BUTONU
                         ElevatedButton(
                           onPressed: _login,

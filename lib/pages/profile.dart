@@ -191,72 +191,6 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
-  void _showImagePickerSheet() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Theme.of(context).colorScheme.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (context) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 36,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                ListTile(
-                  leading: CircleAvatar(
-                    backgroundColor: AppTheme.primaryNavy.withAlpha(15),
-                    child: const Icon(
-                      Icons.camera_alt_rounded,
-                      color: AppTheme.primaryNavy,
-                    ),
-                  ),
-                  title: const Text(
-                    "Kamera ile Çek",
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  onTap: () {
-                    Navigator.pop(context);
-                    _pickAndUploadImage(ImageSource.camera);
-                  },
-                ),
-                const Divider(),
-                ListTile(
-                  leading: CircleAvatar(
-                    backgroundColor: AppTheme.primaryNavy.withAlpha(15),
-                    child: const Icon(
-                      Icons.photo_library_rounded,
-                      color: AppTheme.primaryNavy,
-                    ),
-                  ),
-                  title: const Text(
-                    "Galeriden Seç",
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  onTap: () {
-                    Navigator.pop(context);
-                    _pickAndUploadImage(ImageSource.gallery);
-                  },
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
   Future<void> _updateProfile({
     required String name,
     required String username,
@@ -329,7 +263,7 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-Future<void> _deleteAccount() async {
+  Future<void> _deleteAccount() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString("token");
@@ -341,8 +275,8 @@ Future<void> _deleteAccount() async {
 
       final response = await api.deleteAccount(token);
 
-      // Yanıtın JSON olup olmadığını kontrol ediyoruz
-      if (response.headers['content-type']?.contains('application/json') ?? false) {
+      if (response.headers['content-type']?.contains('application/json') ??
+          false) {
         final data = jsonDecode(response.body);
 
         if (response.statusCode == 200) {
@@ -369,11 +303,11 @@ Future<void> _deleteAccount() async {
           );
         }
       } else {
-        // Backend HTML hatası veya 404 döndürdüyse
         if (!mounted) return;
         AppTheme.showSnackBar(
           context,
-          message: "Sunucu hatası (${response.statusCode}). Lütfen API yolunu kontrol edin.",
+          message:
+              "Sunucu hatası (${response.statusCode}). Lütfen API yolunu kontrol edin.",
           isError: true,
         );
       }
@@ -397,171 +331,16 @@ Future<void> _deleteAccount() async {
           currentEmail: _currentEmail,
           currentPhone: _currentPhone,
           currentBirthDate: _currentBirthDate,
+          currentPhotoUrl: _profilePhotoUrl,
           onSave: _updateProfile,
+          onPickPhoto: _pickAndUploadImage,
         ),
       ),
-    );
-  }
-
-  // ⚙️ AYARLAR EKRANI DİYALOĞU / EKRANI (ANLIK TEMA DEĞİŞİMLİ)
-  void _openSettingsPage() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent, // Arka planı transparent yapıp içeride dinamik temalıyoruz
-      builder: (modalContext) {
-        return ValueListenableBuilder<ThemeMode>(
-          valueListenable: themeNotifier,
-          builder: (context, currentMode, _) {
-            // Anlık değişen tema rengini doğrudan alıyoruz
-            final isDark = currentMode == ThemeMode.dark;
-            final surfaceColor = isDark
-                ? AppTheme.darkSurfaceColor
-                : AppTheme.surfaceColor;
-            final onSurfaceColor = isDark
-                ? AppTheme.darkTextColor
-                : AppTheme.textColor;
-
-            return Container(
-              decoration: BoxDecoration(
-                color: surfaceColor,
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(28),
-                ),
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-              child: SafeArea(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Center(
-                      child: Container(
-                        width: 40,
-                        height: 4,
-                        decoration: BoxDecoration(
-                          color: onSurfaceColor.withAlpha(50),
-                          borderRadius: BorderRadius.circular(2),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 18),
-
-                    Text(
-                      "Ayarlar",
-                      style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                        color: onSurfaceColor,
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-
-                    // 1. KOYU TEMA SWITCH (ANINDA RENGİ DEĞİŞİR)
-                    Container(
-                      decoration: BoxDecoration(
-                        color: isDark
-                            ? AppTheme.darkBackgroundColor
-                            : AppTheme.backgroundColor,
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: SwitchListTile(
-                        value: _isDarkMode,
-                        activeThumbColor: isDark
-                            ? AppTheme.darkAccentBlue
-                            : AppTheme.primaryNavy,
-                        secondary: Icon(
-                          _isDarkMode
-                              ? Icons.dark_mode_rounded
-                              : Icons.light_mode_rounded,
-                          color: isDark
-                              ? AppTheme.darkAccentBlue
-                              : AppTheme.primaryNavy,
-                        ),
-                        title: Text(
-                          "Koyu Tema",
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                            color: onSurfaceColor,
-                          ),
-                        ),
-                        onChanged: (value) async {
-                          setState(() => _isDarkMode = value);
-
-                          // Global tema notifier'ı tetikliyoruz (ValueListenableBuilder anında rebuild eder)
-                          themeNotifier.value =
-                              value ? ThemeMode.dark : ThemeMode.light;
-
-                          final prefs = await SharedPreferences.getInstance();
-                          await prefs.setBool("isDarkMode", value);
-                        },
-                      ),
-                    ),
-
-                    const SizedBox(height: 12),
-
-                    // 2. ÇIKIŞ YAP
-                    ListTile(
-                      leading: Icon(
-                        Icons.logout_rounded,
-                        color: isDark
-                            ? AppTheme.darkAccentBlue
-                            : AppTheme.primaryNavy,
-                      ),
-                      title: Text(
-                        "Çıkış Yap",
-                        style: TextStyle(
-                          fontWeight: FontWeight.w600,
-                          color: onSurfaceColor,
-                        ),
-                      ),
-                      onTap: () {
-                        Navigator.pop(modalContext);
-                        _logout();
-                      },
-                    ),
-
-                    Divider(color: onSurfaceColor.withAlpha(30)),
-
-                    // 3. HESABI SİL
-                    ListTile(
-                      leading: const Icon(
-                        Icons.delete_forever_rounded,
-                        color: AppTheme.errorColor,
-                      ),
-                      title: const Text(
-                        "Hesabı Sil",
-                        style: TextStyle(
-                          fontWeight: FontWeight.w600,
-                          color: AppTheme.errorColor,
-                        ),
-                      ),
-                      subtitle: Text(
-                        "Bu işlem geri alınamaz.",
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: onSurfaceColor.withAlpha(130),
-                        ),
-                      ),
-                      onTap: () {
-                        Navigator.pop(modalContext);
-                        _confirmDeleteAccount();
-                      },
-                    ),
-
-                    const SizedBox(height: 12),
-                  ],
-                ),
-              ),
-            );
-          },
-        );
-      },
-    );
+    ).then((_) => _loadProfile());
   }
 
   void _confirmDeleteAccount() {
+    final onSurfaceColor = Theme.of(context).colorScheme.onSurface;
     showDialog(
       context: context,
       builder: (context) {
@@ -569,21 +348,30 @@ Future<void> _deleteAccount() async {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
           ),
-          title: const Text(
+          title: Text(
             "Hesabınızı Silmek İstiyor musunuz?",
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 18,
+              color: onSurfaceColor,
+            ),
           ),
-          content: const Text(
+          content: Text(
             "Tüm mesajlarınız ve kişisel verileriniz kalıcı olarak silinecektir.",
+            style: TextStyle(color: onSurfaceColor.withAlpha(160)),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text("İptal"),
+              child: Text(
+                "İptal",
+                style: TextStyle(color: onSurfaceColor.withAlpha(180)),
+              ),
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppTheme.errorColor,
+                elevation: 0,
                 minimumSize: const Size(90, 40),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10),
@@ -595,7 +383,10 @@ Future<void> _deleteAccount() async {
               },
               child: const Text(
                 "Hesabımı Sil",
-                style: TextStyle(color: Colors.white),
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
           ],
@@ -604,8 +395,92 @@ Future<void> _deleteAccount() async {
     );
   }
 
+  Widget _buildSectionHeader(String title, bool isDark) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Padding(
+        padding: const EdgeInsets.only(left: 4, bottom: 8),
+        child: Text(
+          title.toUpperCase(),
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.8,
+            color: isDark ? const Color(0xFF8E8B94) : const Color(0xFF827E8C),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInfoRow({
+    required IconData icon,
+    required String label,
+    required String value,
+    required bool isDark,
+  }) {
+    final onSurfaceColor = Theme.of(context).colorScheme.onSurface;
+    final subColor = isDark ? const Color(0xFF8E8B94) : const Color(0xFF827E8C);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+      child: Row(
+        children: [
+          Container(
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(
+              color: isDark
+                  ? const Color.fromARGB(255, 87, 84, 92)
+                  : const Color(0xFFF3F2F5),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(
+              icon,
+              size: 19,
+              color: isDark ? Colors.white70 : const Color(0xFF2C2A31),
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label.toUpperCase(),
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.7,
+                    color: subColor,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  value.isNotEmpty ? value : "Belirtilmemiş",
+                  style: TextStyle(
+                    fontSize: 14.5,
+                    fontWeight: FontWeight.w600,
+                    color: onSurfaceColor,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final surfaceColor = isDark
+        ? AppTheme.darkSurfaceColor
+        : AppTheme.surfaceColor;
+    final onSurfaceColor = theme.colorScheme.onSurface;
+
     final String firstLetter = _currentName.isNotEmpty
         ? _currentName[0].toUpperCase()
         : "?";
@@ -616,157 +491,387 @@ Future<void> _deleteAccount() async {
         : null;
 
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      extendBody: true,
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        // SOL ÜST - AYARLAR BUTONU
-        leading: IconButton(
-          icon: const Icon(Icons.settings, size: 26),
-          onPressed: _openSettingsPage,
-        ),
-        title: Text(
+        title: const Text(
           "Profil",
-          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+          style: TextStyle(
+            fontSize: 19,
             fontWeight: FontWeight.w800,
-            letterSpacing: -0.5,
+            letterSpacing: -0.3,
           ),
         ),
         centerTitle: true,
-        // SAĞ ÜST - DÜZENLEME BUTONU
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.edit_note_rounded, size: 28),
-            onPressed: _navigateToEditProfile,
-          ),
-        ],
+        elevation: 0,
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 24),
+        physics: const BouncingScrollPhysics(),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
         child: Column(
           children: [
-            const SizedBox(height: 90),
+            const SizedBox(height: 8),
 
-            // Profil Avatarı
+            // 📸 SADE VE ŞIK PROFİL FOTOĞRAFI (Fotoğraf üstünde buton yok)
             Center(
-              child: SizedBox(
-                width: 170,
-                height: 170,
-                child: Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    Container(
-                      width: 170,
-                      height: 170,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: fullPhotoUrl == null
-                            ? const LinearGradient(
-                                colors: [
-                                  AppTheme.primaryNavy,
-                                  AppTheme.secondaryNavy,
-                                ],
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                              )
-                            : null,
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppTheme.primaryNavy.withAlpha(50),
-                            blurRadius: 16,
-                            offset: const Offset(0, 6),
-                          ),
-                        ],
-                      ),
-                      alignment: Alignment.center,
-                      child: _isUploadingPhoto
-                          ? const CircularProgressIndicator(color: Colors.white)
-                          : fullPhotoUrl != null
-                          ? ClipOval(
-                              child: Image.network(
-                                fullPhotoUrl,
-                                width: 170,
-                                height: 170,
-                                fit: BoxFit.cover,
-                                errorBuilder: (_, __, ___) => Text(
-                                  firstLetter,
-                                  style: const TextStyle(
-                                    fontSize: 48,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                              ),
-                            )
-                          : Text(
-                              firstLetter,
-                              style: const TextStyle(
-                                fontSize: 48,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
-                            ),
-                    ),
-                    Positioned(
-                      right: -2,
-                      bottom: -2,
-                      child: InkWell(
-                        onTap: _showImagePickerSheet,
-                        child: Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.surface,
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: Theme.of(context).scaffoldBackgroundColor,
-                              width: 3,
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withAlpha(25),
-                                blurRadius: 8,
-                                offset: const Offset(0, 3),
-                              ),
-                            ],
-                          ),
-                          child: Icon(
-                            Icons.add_a_photo_rounded,
-                            size: 19,
-                            color: Theme.of(context).colorScheme.primary,
-                          ),
-                        ),
-                      ),
+              child: Container(
+                width: 110,
+                height: 110,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: isDark ? const Color(0xFF1D1C21) : Colors.white,
+                  border: Border.all(
+                    color: isDark
+                        ? const Color(0xFF2C2A31)
+                        : const Color(0xFFE2E0E7),
+                    width: 2,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withAlpha(isDark ? 80 : 10),
+                      blurRadius: 16,
+                      offset: const Offset(0, 6),
                     ),
                   ],
                 ),
+                alignment: Alignment.center,
+                child: _isUploadingPhoto
+                    ? const CircularProgressIndicator(
+                        strokeWidth: 2.5,
+                        color: Colors.black54,
+                      )
+                    : fullPhotoUrl != null
+                    ? ClipOval(
+                        child: Image.network(
+                          fullPhotoUrl,
+                          width: 110,
+                          height: 110,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => Text(
+                            firstLetter,
+                            style: TextStyle(
+                              fontSize: 36,
+                              fontWeight: FontWeight.bold,
+                              color: onSurfaceColor,
+                            ),
+                          ),
+                        ),
+                      )
+                    : Text(
+                        firstLetter,
+                        style: TextStyle(
+                          fontSize: 36,
+                          fontWeight: FontWeight.bold,
+                          color: onSurfaceColor,
+                        ),
+                      ),
+              ),
+            ),
+
+            const SizedBox(height: 14),
+
+            // İSİM
+            Text(
+              _currentName.isNotEmpty ? _currentName : "Kullanıcı",
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 21,
+                fontWeight: FontWeight.w800,
+                color: onSurfaceColor,
+                letterSpacing: -0.4,
+              ),
+            ),
+
+            const SizedBox(height: 24),
+
+            // 1. BÖLÜM: BİLGİ KARTI & PROFİLİ DÜZENLE
+            // profile.dart -> 1. BÖLÜM: BİLGİ KARTI & PROFİLİ DÜZENLE
+            _buildSectionHeader("Kullanıcı Bilgileri", isDark),
+            Container(
+              decoration: BoxDecoration(
+                color: surfaceColor,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: isDark
+                      ? const Color.fromARGB(255, 0, 0, 0)
+                      : const Color.fromARGB(255, 255, 255, 255),
+                  width: 1.1,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withAlpha(isDark ? 50 : 6),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Column(
+                children: [
+                  _buildInfoRow(
+                    icon: Icons.alternate_email_rounded,
+                    label: "Kullanıcı Adı",
+                    value: _currentUsername.isNotEmpty
+                        ? "@$_currentUsername"
+                        : "",
+                    isDark: isDark,
+                  ),
+                  Divider(
+                    height: 1,
+                    thickness: 0.7,
+                    indent: 16,
+                    endIndent: 16,
+                    color: onSurfaceColor.withAlpha(isDark ? 16 : 10),
+                  ),
+                  _buildInfoRow(
+                    icon: Icons.phone_outlined,
+                    label: "Telefon Numarası",
+                    value: _currentPhone,
+                    isDark: isDark,
+                  ),
+                  Divider(
+                    height: 1,
+                    thickness: 0.7,
+                    indent: 16,
+                    endIndent: 16,
+                    color: onSurfaceColor.withAlpha(isDark ? 16 : 10),
+                  ),
+                  _buildInfoRow(
+                    icon: Icons.mail_outline_rounded,
+                    label: "E-Posta Adresi",
+                    value: _currentEmail,
+                    isDark: isDark,
+                  ),
+                  Divider(
+                    height: 1,
+                    thickness: 0.7,
+                    indent: 16,
+                    endIndent: 16,
+                    color: onSurfaceColor.withAlpha(isDark ? 16 : 10),
+                  ),
+                  // 🎂 DOĞUM TARİHİ ALANI
+                  _buildInfoRow(
+                    icon: Icons.cake_outlined,
+                    label: "Doğum Tarihi",
+                    value: _currentBirthDate,
+                    isDark: isDark,
+                  ),
+
+                  const SizedBox(height: 8),
+
+                  // PROFİLİ DÜZENLE (TextButton)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
+                    child: SizedBox(
+                      width: double.infinity,
+                      height: 44,
+                      child: TextButton.icon(
+                        icon: Icon(
+                          Icons.edit_note_rounded,
+                          size: 20,
+                          color: isDark
+                              ? Colors.white70
+                              : const Color(0xFF19181B),
+                        ),
+                        label: Text(
+                          "Profili Düzenle",
+                          style: TextStyle(
+                            fontSize: 14.5,
+                            fontWeight: FontWeight.w700,
+                            color: isDark
+                                ? Colors.white
+                                : const Color(0xFF19181B),
+                          ),
+                        ),
+                        style: TextButton.styleFrom(
+                          backgroundColor: isDark
+                              ? Colors.white.withAlpha(8)
+                              : Colors.black.withAlpha(5),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        onPressed: _navigateToEditProfile,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
 
             const SizedBox(height: 20),
 
-            Text(
-              _currentName,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.onSurface,
-                letterSpacing: -0.3,
+            // 2. BÖLÜM: TEMA VE TERCİHLER KARTI (Ayarlar içeriği)
+            _buildSectionHeader("Tercihler", isDark),
+            Container(
+              decoration: BoxDecoration(
+                color: surfaceColor,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: isDark
+                      ? const Color.fromARGB(255, 0, 0, 0)
+                      : const Color.fromARGB(255, 255, 255, 255),
+                  width: 1.1,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withAlpha(isDark ? 50 : 6),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: SwitchListTile(
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 4,
+                ),
+                value: _isDarkMode,
+                activeThumbColor: isDark ? Colors.white : Colors.black,
+                activeTrackColor: isDark
+                    ? const Color(0xFF3F3D45)
+                    : const Color(0xFFCCCCCC),
+                secondary: Container(
+                  width: 38,
+                  height: 38,
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? const Color(0xFF141316)
+                        : const Color(0xFFF3F2F5),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(
+                    _isDarkMode
+                        ? Icons.dark_mode_rounded
+                        : Icons.light_mode_rounded,
+                    size: 19,
+                    color: isDark ? Colors.white70 : const Color(0xFF2C2A31),
+                  ),
+                ),
+                title: Text(
+                  "Koyu Tema",
+                  style: TextStyle(
+                    fontSize: 14.5,
+                    fontWeight: FontWeight.w600,
+                    color: onSurfaceColor,
+                  ),
+                ),
+                onChanged: (value) async {
+                  setState(() => _isDarkMode = value);
+                  themeNotifier.value = value
+                      ? ThemeMode.dark
+                      : ThemeMode.light;
+
+                  final prefs = await SharedPreferences.getInstance();
+                  await prefs.setBool("isDarkMode", value);
+                },
               ),
             ),
 
-            const SizedBox(height: 4),
+            const SizedBox(height: 20),
 
-            Text(
-              "@$_currentUsername",
-              style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w500,
-                color: Theme.of(context).colorScheme.onSurface.withAlpha(140),
+            // 3. BÖLÜM: HESAP İŞLEMLERİ (Çıkış & Silme Kartı)
+            _buildSectionHeader("Hesap", isDark),
+            Container(
+              decoration: BoxDecoration(
+                color: surfaceColor,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: isDark
+                      ? const Color.fromARGB(255, 0, 0, 0)
+                      : const Color.fromARGB(255, 255, 255, 255),
+                  width: 1.1,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withAlpha(isDark ? 50 : 6),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Column(
+                children: [
+                  ListTile(
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 2,
+                    ),
+                    leading: Container(
+                      width: 38,
+                      height: 38,
+                      decoration: BoxDecoration(
+                        color: isDark
+                            ? const Color(0xFF141316)
+                            : const Color(0xFFF3F2F5),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Icon(
+                        Icons.logout_rounded,
+                        size: 19,
+                        color: isDark
+                            ? Colors.white70
+                            : const Color(0xFF2C2A31),
+                      ),
+                    ),
+                    title: Text(
+                      "Çıkış Yap",
+                      style: TextStyle(
+                        fontSize: 14.5,
+                        fontWeight: FontWeight.w600,
+                        color: onSurfaceColor,
+                      ),
+                    ),
+                    trailing: Icon(
+                      Icons.chevron_right_rounded,
+                      size: 20,
+                      color: onSurfaceColor.withAlpha(100),
+                    ),
+                    onTap: _logout,
+                  ),
+                  Divider(
+                    height: 1,
+                    thickness: 0.7,
+                    indent: 16,
+                    endIndent: 16,
+                    color: onSurfaceColor.withAlpha(isDark ? 16 : 10),
+                  ),
+                  ListTile(
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 2,
+                    ),
+                    leading: Container(
+                      width: 38,
+                      height: 38,
+                      decoration: BoxDecoration(
+                        color: AppTheme.errorColor.withAlpha(isDark ? 25 : 15),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(
+                        Icons.delete_outline_rounded,
+                        size: 19,
+                        color: AppTheme.errorColor,
+                      ),
+                    ),
+                    title: const Text(
+                      "Hesabı Sil",
+                      style: TextStyle(
+                        fontSize: 14.5,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.errorColor,
+                      ),
+                    ),
+                    trailing: Icon(
+                      Icons.chevron_right_rounded,
+                      size: 20,
+                      color: AppTheme.errorColor.withAlpha(140),
+                    ),
+                    onTap: _confirmDeleteAccount,
+                  ),
+                ],
               ),
             ),
 
-            const SizedBox(height: 120),
+            const SizedBox(height: 110),
           ],
         ),
       ),

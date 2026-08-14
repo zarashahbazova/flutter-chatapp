@@ -29,6 +29,7 @@ class _MessagesPageState extends State<MessagesPage> {
   int? currentUserId;
 
   final TextEditingController _searchController = TextEditingController();
+  final FocusNode _searchFocusNode = FocusNode();
   final ScrollController _scrollController = ScrollController();
   late PageController _pageController;
 
@@ -54,7 +55,12 @@ class _MessagesPageState extends State<MessagesPage> {
 
     loadUser();
 
+    _searchFocusNode.addListener(() {
+      setState(() {});
+    });
+
     _scrollController.addListener(() {
+      // 65 piksel aşağı kayınca AppBar belirginleşir
       final show = _scrollController.offset > 65;
       if (show != _showSmallTitle) {
         setState(() => _showSmallTitle = show);
@@ -76,6 +82,7 @@ class _MessagesPageState extends State<MessagesPage> {
     _pollingTimer?.cancel();
     _scrollController.dispose();
     _searchController.dispose();
+    _searchFocusNode.dispose();
     _pageController.dispose();
     super.dispose();
   }
@@ -101,7 +108,7 @@ class _MessagesPageState extends State<MessagesPage> {
             child: ClipRRect(
               borderRadius: BorderRadius.circular(20),
               child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+                filter: ImageFilter.blur(sigmaX: 2, sigmaY: 2),
                 child: Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 16,
@@ -433,18 +440,23 @@ class _MessagesPageState extends State<MessagesPage> {
     );
   }
 
-  void _openNewChatOptions() {
-    showModalBottomSheet(
+  Future<void> _openNewChatOptions() async {
+    final result = await showModalBottomSheet<String>(
       context: context,
       backgroundColor: Theme.of(context).colorScheme.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (_) => NewChatSheet(
-        onSingleChatTap: _openSingleChatDialog,
-        onGroupChatTap: _openGroupChatDialog,
-      ),
+      builder: (_) => const NewChatSheet(),
     );
+
+    if (!mounted) return;
+
+    if (result == "single") {
+      _openSingleChatDialog();
+    } else if (result == "group") {
+      _openGroupChatDialog();
+    }
   }
 
   void _handleTileTap(Map<String, dynamic> user) {
@@ -478,7 +490,6 @@ class _MessagesPageState extends State<MessagesPage> {
     });
   }
 
-  // 🔴 BASILI TUTUNCA AÇILAN SEÇENEK MENÜSÜ (AÇIKTA SİYAH, KOYUDA BEYAZ YAZI)
   void _showChatOptionsMenu(Map<String, dynamic> user) {
     final onSurfaceColor = Theme.of(context).colorScheme.onSurface;
 
@@ -504,8 +515,6 @@ class _MessagesPageState extends State<MessagesPage> {
                   ),
                 ),
                 const SizedBox(height: 12),
-
-                // 1. SADECE MESAJLARI SİL
                 ListTile(
                   leading: const Icon(
                     Icons.cleaning_services_rounded,
@@ -515,7 +524,7 @@ class _MessagesPageState extends State<MessagesPage> {
                     "Sadece Sohbet Mesajlarını Sil",
                     style: TextStyle(
                       fontWeight: FontWeight.w600,
-                      color: onSurfaceColor, // Açıkta siyah, koyuda beyaz
+                      color: onSurfaceColor,
                     ),
                   ),
                   subtitle: Text(
@@ -530,10 +539,7 @@ class _MessagesPageState extends State<MessagesPage> {
                     _clearChatMessages(user["room_id"]);
                   },
                 ),
-
                 const Divider(height: 1),
-
-                // 2. SOHBETİ SİL (TAMAMEN KALDIR)
                 ListTile(
                   leading: const Icon(
                     Icons.delete_outline_rounded,
@@ -566,7 +572,6 @@ class _MessagesPageState extends State<MessagesPage> {
     );
   }
 
-  // 1. SOHBETİ TAMAMEN SİLME
   Future<void> _deleteChat(Map<String, dynamic> user) async {
     if (token == null || currentUserId == null) return;
 
@@ -640,7 +645,6 @@ class _MessagesPageState extends State<MessagesPage> {
     }
   }
 
-  // 2. Sadece MESAJLARI SİLME (Sohbet Kutusunu Tutma)
   Future<void> _clearChatMessages(dynamic roomId) async {
     setState(() {
       final index = users.indexWhere((item) => item["room_id"] == roomId);
@@ -663,174 +667,201 @@ class _MessagesPageState extends State<MessagesPage> {
     final theme = Theme.of(context);
     final surfaceColor = theme.colorScheme.surface;
     final onSurfaceColor = theme.colorScheme.onSurface;
+    final isDark = theme.brightness == Brightness.dark;
 
-    // 🔴 Toplam Okunmamış Mesaj Sayısını Hesaplama
     final totalUnread = users.fold<int>(
       0,
       (sum, item) => sum + ((item["unread"] as int?) ?? 0),
     );
 
     return Scaffold(
-      backgroundColor: theme.scaffoldBackgroundColor,
       extendBody: true,
+      extendBodyBehindAppBar: true, // AppBar altında liste akışının yumuşak görünmesi için
       appBar: _selectedIndex == 0
           ? PreferredSize(
               preferredSize: const Size.fromHeight(64),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 250),
-                decoration: BoxDecoration(
-                  color: _showSmallTitle
-                      ? surfaceColor.withAlpha(220)
-                      : Colors.transparent,
-                  border: Border(
-                    bottom: BorderSide(
+              child: ClipRect(
+                child: BackdropFilter(
+                  filter: _showSmallTitle
+                      ? ImageFilter.blur(sigmaX: 16, sigmaY: 16)
+                      : ImageFilter.blur(sigmaX: 0, sigmaY: 0),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 250),
+                    decoration: BoxDecoration(
                       color: _showSmallTitle
-                          ? onSurfaceColor.withAlpha(12)
-                          : Colors.transparent,
-                      width: 1,
-                    ),
-                  ),
-                  boxShadow: _showSmallTitle
-                      ? [
-                          BoxShadow(
-                            color: Colors.black.withAlpha(8),
-                            blurRadius: 12,
-                            offset: const Offset(0, 4),
-                          ),
-                        ]
-                      : [],
-                ),
-                child: AppBar(
-                  toolbarHeight: 64,
-                  elevation: 0,
-                  scrolledUnderElevation: 0,
-                  backgroundColor: Colors.transparent,
-                  surfaceTintColor: Colors.transparent,
-                  centerTitle: true,
-
-                  // 🔴 SOL ÜSTE "X yeni mesaj" YAZI FORMATI
-                  leadingWidth: 120,
-                  leading: totalUnread > 0
-                      ? Padding(
-                          padding: const EdgeInsets.only(left: 12),
-                          child: Center(
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 10,
-                                vertical: 5,
+                          ? surfaceColor.withAlpha(190)
+                          : Colors.transparent, // Kaydırılmadığında tamamen şeffaf
+                      border: Border(
+                        bottom: BorderSide(
+                          color: _showSmallTitle
+                              ? onSurfaceColor.withAlpha(12)
+                              : Colors.transparent,
+                          width: 1,
+                        ),
+                      ),
+                      boxShadow: _showSmallTitle
+                          ? [
+                              BoxShadow(
+                                color: Colors.black.withAlpha(8),
+                                blurRadius: 12,
+                                offset: const Offset(0, 4),
                               ),
-                              decoration: BoxDecoration(
-                                color: theme.colorScheme.primary,
-                                borderRadius: BorderRadius.circular(16),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: theme.colorScheme.primary.withAlpha(
-                                      80,
+                            ]
+                          : [],
+                    ),
+                    child: AppBar(
+                      toolbarHeight: 64,
+                      elevation: 0,
+                      scrolledUnderElevation: 0,
+                      backgroundColor: Colors.transparent,
+                      surfaceTintColor: Colors.transparent,
+                      centerTitle: true,
+                      leadingWidth: 120,
+                      leading: totalUnread > 0
+                          ? Padding(
+                              padding: const EdgeInsets.only(left: 12),
+                              child: Center(
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 5,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: theme.colorScheme.primary,
+                                    borderRadius: BorderRadius.circular(16),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: theme.colorScheme.primary
+                                            .withAlpha(80),
+                                        blurRadius: 8,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ],
+                                  ),
+                                  child: Text(
+                                    totalUnread > 99
+                                        ? "99+ yeni mesaj"
+                                        : "$totalUnread yeni mesaj",
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
                                     ),
-                                    blurRadius: 8,
-                                    offset: const Offset(0, 2),
                                   ),
-                                ],
-                              ),
-                              child: Text(
-                                totalUnread > 99
-                                    ? "99+ yeni mesaj"
-                                    : "$totalUnread yeni mesaj",
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.bold,
                                 ),
                               ),
+                            )
+                          : null,
+                      title: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children:[ 
+                         
+                            
+                          
+                          Text(
+                            "Sohbetler",
+                            style: TextStyle(
+                              fontSize: 21,
+                              fontWeight: FontWeight.w800,
+                              color: onSurfaceColor,
+                              letterSpacing: -0.3,
                             ),
                           ),
-                        )
-                      : null,
-
-                  title: Text(
-                    "Sohbetler",
-                    style: TextStyle(
-                      fontSize: 21,
-                      fontWeight: FontWeight.w800,
-                      color: onSurfaceColor,
-                      letterSpacing: -0.3,
-                    ),
-                  ),
-
-                  actions: [
-                    Padding(
-                      padding: const EdgeInsets.only(right: 12),
-                      child: Center(
-                        child: Material(
-                          color: Colors.transparent,
-                          shape: const CircleBorder(),
-                          clipBehavior: Clip.antiAlias,
-                          child: InkWell(
-                            onTap: _openNewChatOptions,
-                            splashColor: theme.colorScheme.primary.withAlpha(
-                              30,
-                            ),
-                            child: Container(
-                              width: 42,
-                              height: 42,
-                              decoration: BoxDecoration(
-                                color: theme.colorScheme.primary.withAlpha(12),
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                  color: theme.colorScheme.primary.withAlpha(
-                                    25,
+                        ],
+                      ),
+                      actions: [
+                        Padding(
+                          padding: const EdgeInsets.only(right: 12),
+                          child: Center(
+                            child: Material(
+                              color: const Color.fromARGB(23, 0, 0, 0),
+                              shape: const CircleBorder(),
+                              clipBehavior: Clip.antiAlias,
+                              child: InkWell(
+                                onTap: _openNewChatOptions,
+                                splashColor: theme.colorScheme.primary
+                                    .withAlpha(30),
+                                child: Container(
+                                  width: 42,
+                                  height: 42,
+                                  decoration: BoxDecoration(
+                                    color: theme.colorScheme.primary.withAlpha(
+                                      12,
+                                    ),
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: theme.colorScheme.primary
+                                          .withAlpha(15),
+                                      width: 1.2,
+                                    ),
                                   ),
-                                  width: 1.2,
+                                  child: Icon(
+                                    Icons.add,
+                                    color: AppTheme.darkBackgroundColor,
+                                    size: 20,
+                                  ),
                                 ),
-                              ),
-                              child: Icon(
-                                Icons.add,
-                                color: theme.colorScheme.primary,
-                                size: 20,
                               ),
                             ),
                           ),
                         ),
-                      ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
               ),
             )
           : null,
-      body: Stack(
-        children: [
-          PageView(
-            controller: _pageController,
-            onPageChanged: (index) {
-              setState(() {
-                _selectedIndex = index;
-              });
-            },
-            children: [_page(), const ProfilePage()],
+      body: Container(
+        // 🔄 Renk sırası tam tersi yapıldı (Yukarıdan aşağıya ters gradyan)
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: isDark
+                ? [
+                    const Color.fromARGB(255, 54, 53, 59),
+                    const Color.fromARGB(255, 118, 114, 125),
+                  ]
+                : [
+                    const Color.fromARGB(255, 222, 224, 246),
+                    AppTheme.backgroundColor,
+                  ],
           ),
-
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: MediaQuery.of(context).padding.bottom + 16,
-            child: Align(
-              alignment: Alignment.bottomCenter,
-              child: CustomGlassNavBar(
-                selectedIndex: _selectedIndex,
-                currentPage: _currentPage,
-                pageController: _pageController,
-                totalUnread: totalUnread,
-                onPageSelected: (index) {
-                  setState(() => _selectedIndex = index);
-                },
-                onPageDragged: (page) {
-                  setState(() => _currentPage = page);
-                },
+        ),
+        child: Stack(
+          children: [
+            PageView(
+              controller: _pageController,
+              onPageChanged: (index) {
+                setState(() {
+                  _selectedIndex = index;
+                });
+              },
+              children: [_page(), const ProfilePage()],
+            ),
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: MediaQuery.of(context).padding.bottom + 16,
+              child: Align(
+                alignment: Alignment.bottomCenter,
+                child: CustomGlassNavBar(
+                  selectedIndex: _selectedIndex,
+                  currentPage: _currentPage,
+                  pageController: _pageController,
+                  totalUnread: totalUnread,
+                  onPageSelected: (index) {
+                    setState(() => _selectedIndex = index);
+                  },
+                  onPageDragged: (page) {
+                    setState(() => _currentPage = page);
+                  },
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -856,169 +887,254 @@ class _MessagesPageState extends State<MessagesPage> {
     final surfaceColor = Theme.of(context).colorScheme.surface;
     final onSurfaceColor = Theme.of(context).colorScheme.onSurface;
 
-    return ListView(
-      controller: _scrollController,
-      physics: const BouncingScrollPhysics(),
-      padding: EdgeInsets.only(
-        top: 16,
-        bottom: MediaQuery.of(context).padding.bottom + 100,
-      ),
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 18),
-          child: Container(
-            height: 46,
-            decoration: BoxDecoration(
-              color: surfaceColor.withAlpha(220),
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(
-                color: onSurfaceColor.withAlpha(20),
-                width: 1.2,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withAlpha(15),
-                  blurRadius: 16,
-                  spreadRadius: 0,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            alignment: Alignment.center,
-            child: TextField(
-              controller: _searchController,
-              style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w500,
-                color: onSurfaceColor,
-              ),
-              decoration: InputDecoration(
-                border: InputBorder.none,
-                enabledBorder: InputBorder.none,
-                focusedBorder: InputBorder.none,
-                filled: true,
-                fillColor: Colors.transparent,
-                isDense: true,
-                contentPadding: const EdgeInsets.symmetric(vertical: 0),
-                prefixIcon: Padding(
-                  padding: const EdgeInsets.only(left: 10, right: 10),
-                  child: Icon(
-                    Icons.search_rounded,
-                    size: 22,
-                    color: onSurfaceColor.withAlpha(140),
-                  ),
-                ),
-                prefixIconConstraints: const BoxConstraints(minWidth: 44),
-                suffixIcon: _searchText.isNotEmpty
-                    ? GestureDetector(
-                        onTap: () {
-                          _searchController.clear();
-                          setState(() => _searchText = "");
-                        },
-                        child: Icon(
-                          Icons.cancel_rounded,
-                          size: 18,
-                          color: onSurfaceColor.withAlpha(120),
-                        ),
-                      )
-                    : null,
-                hintText: "Sohbetlerde ara...",
-                hintStyle: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w400,
-                  color: onSurfaceColor.withAlpha(120),
-                ),
-              ),
-              onChanged: (value) => setState(() => _searchText = value),
-            ),
-          ),
+    // 🔄 Aşağı çekince yenileme (Pull to Refresh) eklendi
+    return RefreshIndicator(
+      color: primaryColor,
+      backgroundColor: surfaceColor,
+      onRefresh: () async {
+        await loadRooms(showLoading: false);
+      },
+      child: ListView(
+        controller: _scrollController,
+        physics: const AlwaysScrollableScrollPhysics(
+          parent: BouncingScrollPhysics(),
         ),
-        const SizedBox(height: 12),
-
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          physics: const BouncingScrollPhysics(),
-          padding: const EdgeInsets.symmetric(horizontal: 18),
-          child: Row(
-            children: ["Tümü", "Okunmamış", "Gruplar"].map((filter) {
-              final bool isSelected = _selectedFilter == filter;
-              return Padding(
-                padding: const EdgeInsets.only(right: 8),
-                child: GestureDetector(
-                  onTap: () => setState(() => _selectedFilter = filter),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 7,
-                    ),
-                    decoration: BoxDecoration(
-                      color: isSelected
-                          ? primaryColor.withAlpha(250)
-                          : surfaceColor.withAlpha(200),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: isSelected
-                            ? primaryColor
-                            : onSurfaceColor.withAlpha(25),
-                        width: 1,
-                      ),
-                    ),
-                    child: Text(
-                      filter,
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: isSelected
-                            ? FontWeight.w700
-                            : FontWeight.w500,
-                        color: isSelected
-                            ? Colors.white
-                            : onSurfaceColor.withAlpha(180),
-                      ),
-                    ),
-                  ),
-                ),
-              );
-            }).toList(),
-          ),
+        padding: EdgeInsets.only(
+          top: MediaQuery.of(context).padding.top + 68,
+          bottom: MediaQuery.of(context).padding.bottom + 100,
         ),
-        const SizedBox(height: 10),
-
-        if (filteredUsers.isEmpty)
+        children: [
           Padding(
-            padding: const EdgeInsets.only(top: 40),
-            child: Center(
-              child: Column(
-                children: [
-                  Icon(
-                    Icons.search_off_rounded,
-                    size: 48,
-                    color: onSurfaceColor.withAlpha(100),
+            padding: const EdgeInsets.symmetric(horizontal: 18),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(24),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 220),
+                  curve: Curves.easeOut,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: surfaceColor.withAlpha(
+                      Theme.of(context).brightness == Brightness.dark ? 140 : 190,
+                    ),
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(
+                      color: _searchFocusNode.hasFocus
+                          ? primaryColor.withAlpha(120)
+                          : onSurfaceColor.withAlpha(18),
+                      width: _searchFocusNode.hasFocus ? 1.4 : 1.1,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: primaryColor.withAlpha(
+                          _searchFocusNode.hasFocus ? 40 : 18,
+                        ),
+                        blurRadius: _searchFocusNode.hasFocus ? 22 : 18,
+                        spreadRadius: -3,
+                        offset: const Offset(0, 6),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 10),
-                  Text(
-                    "Sonuç bulunamadı",
+                  alignment: Alignment.center,
+                  child: TextField(
+                    controller: _searchController,
+                    focusNode: _searchFocusNode,
                     style: TextStyle(
                       fontSize: 15,
-                      color: onSurfaceColor.withAlpha(140),
                       fontWeight: FontWeight.w500,
+                      color: onSurfaceColor,
                     ),
+                    decoration: InputDecoration(
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      filled: true,
+                      fillColor: Colors.transparent,
+                      isDense: true,
+                      contentPadding: const EdgeInsets.symmetric(vertical: 0),
+                      prefixIcon: Padding(
+                        padding: const EdgeInsets.only(left: 12, right: 10),
+                        child: Icon(
+                          Icons.search_rounded,
+                          size: 21,
+                          color: _searchFocusNode.hasFocus
+                              ? primaryColor
+                              : onSurfaceColor.withAlpha(140),
+                        ),
+                      ),
+                      prefixIconConstraints: const BoxConstraints(minWidth: 44),
+                      suffixIcon: _searchText.isNotEmpty
+                          ? GestureDetector(
+                              onTap: () {
+                                _searchController.clear();
+                                setState(() => _searchText = "");
+                              },
+                              child: Icon(
+                                Icons.cancel_rounded,
+                                size: 18,
+                                color: onSurfaceColor.withAlpha(120),
+                              ),
+                            )
+                          : null,
+                      hintText: "Sohbetlerde ara...",
+                      hintStyle: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w400,
+                        color: onSurfaceColor.withAlpha(120),
+                      ),
+                    ),
+                    onChanged: (value) => setState(() => _searchText = value),
                   ),
-                ],
+                ),
               ),
             ),
-          )
-        else
-          ...filteredUsers.map(
-            (user) => MessageTile(
-              user: user,
-              onTap: () => _handleTileTap(user),
-              onLongPress: () => _showChatOptionsMenu(
-                user,
-              ), // 👈 Basılı tutunca seçenek menüsü
+          ),
+          const SizedBox(height: 14),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            physics: const BouncingScrollPhysics(),
+            padding: const EdgeInsets.symmetric(horizontal: 18),
+            child: Row(
+              children:
+                  <MapEntry<String, IconData>>[
+                    const MapEntry("Tümü", Icons.forum_rounded),
+                    const MapEntry("Okunmamış", Icons.mark_chat_unread_rounded),
+                    const MapEntry("Gruplar", Icons.groups_rounded),
+                  ].map((entry) {
+                    final filter = entry.key;
+                    final icon = entry.value;
+                    final bool isSelected = _selectedFilter == filter;
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: GestureDetector(
+                        onTap: () => setState(() => _selectedFilter = filter),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          curve: Curves.easeOut,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 8,
+                          ),
+                          decoration: BoxDecoration(
+                            // gradient: isSelected
+                            //     ? LinearGradient(
+                            //         colors: [
+                            //           primaryColor,
+                            //           AppTheme.primaryNavy,
+                            //         ],
+                            //         begin: Alignment.topLeft,
+                            //         end: Alignment.bottomRight,
+                            //       )
+                            //     : null,
+                            
+                            color: isSelected
+                                ? const Color.fromARGB(215, 0, 0, 0)
+                                : surfaceColor.withAlpha(170),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: isSelected
+                                  ? Colors.transparent
+                                  : onSurfaceColor.withAlpha(22),
+                              width: 1,
+                            ),
+                            boxShadow: isSelected
+                                ? [
+                                    BoxShadow(
+                                      color: primaryColor.withAlpha(60),
+                                      blurRadius: 10,
+                                      offset: const Offset(0, 3),
+                                    ),
+                                  ]
+                                : [],
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                icon,
+                                size: 15,
+                                color: isSelected
+                                    ? Colors.white
+                                    : onSurfaceColor.withAlpha(150),
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                filter,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: isSelected
+                                      ? FontWeight.w700
+                                      : FontWeight.w500,
+                                  color: isSelected
+                                      ? Colors.white
+                                      : onSurfaceColor.withAlpha(180),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  }).toList(),
             ),
           ),
-      ],
+          const SizedBox(height: 10),
+          if (filteredUsers.isEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 56),
+              child: Center(
+                child: Column(
+                  children: [
+                    Container(
+                      width: 84,
+                      height: 84,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: primaryColor.withAlpha(16),
+                        border: Border.all(
+                          color: primaryColor.withAlpha(30),
+                          width: 1.2,
+                        ),
+                      ),
+                      child: Icon(
+                        Icons.search_off_rounded,
+                        size: 34,
+                        color: onSurfaceColor.withAlpha(110),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    Text(
+                      "Sonuç bulunamadı",
+                      style: TextStyle(
+                        fontSize: 15,
+                        color: onSurfaceColor.withAlpha(150),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      "Farklı bir arama veya filtre deneyin",
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        color: onSurfaceColor.withAlpha(100),
+                        fontWeight: FontWeight.w400,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          else
+            ...filteredUsers.map(
+              (user) => MessageTile(
+                user: user,
+                onTap: () => _handleTileTap(user),
+                onLongPress: () => _showChatOptionsMenu(user),
+              ),
+            ),
+        ],
+      ),
     );
   }
 }

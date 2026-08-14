@@ -59,7 +59,7 @@ class ApiClient {
     required String token,
     required String filePath,
   }) async {
-    final uri = Uri.parse("$baseUrl/auth/profile/photo");
+    final uri = Uri.parse("$baseUrl/auth/profile-photo");
     var request = http.MultipartRequest("PUT", uri);
 
     request.headers["Authorization"] = "Bearer $token";
@@ -81,7 +81,32 @@ class ApiClient {
   Future<http.Response> profile(String token) {
     return get(url: "auth/profile", token: token);
   }
+// ŞİFRE SIFIRLAMA - KULLANICI KONTROLÜ
+Future<http.Response> checkUser({
+  required String userName,
+  required String email,
+}) {
+  return post(
+    url: "auth/check-user",
+    body: {
+      "user_name": userName,
+      "email": email,
+    },
+  );
+}
 
+Future<http.Response> resetPassword({
+  required String resetToken,
+  required String newPassword,
+}) {
+  return put(
+    url: "auth/reset-password",
+    token: resetToken,
+    body: {
+      "new_password": newPassword,
+    },
+  );
+}
   Future<http.Response> updateProfile({
     required String token,
     required Map<String, dynamic> body,
@@ -289,7 +314,7 @@ class ApiClient {
       body: {
         'room_id': roomId,
         'user_id': userId,
-        if (newAdminId != null) 'new_admin_id': newAdminId,
+        'new_admin_id': ?newAdminId,
       },
     );
   }

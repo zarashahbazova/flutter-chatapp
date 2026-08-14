@@ -1,4 +1,5 @@
 import 'dart:ui';
+import 'package:Lafla/themes/tema1.dart';
 import 'package:flutter/material.dart';
 
 class CustomGlassNavBar extends StatelessWidget {
@@ -99,7 +100,7 @@ class CustomGlassNavBar extends StatelessWidget {
                         bottom: 0,
                         child: Container(
                           decoration: BoxDecoration(
-                            color: primaryColor.withAlpha(200),
+                            color: const Color.fromARGB(255, 150, 149, 171).withAlpha(170),
                             borderRadius: BorderRadius.circular(28),
                           ),
                         ),
@@ -114,7 +115,7 @@ class CustomGlassNavBar extends StatelessWidget {
 
                           Color dynamicColor = Color.lerp(
                             theme.colorScheme.onSurface.withAlpha(190),
-                            Colors.white,
+                            const Color.fromARGB(255, 0, 0, 0),
                             selectionRatio,
                           )!;
 

@@ -4,11 +4,11 @@ class AppTheme {
   // --- Yeni Ana Renk Tanımı ---
   // Renginiz: #C0BBC8 (Soft Lila/Gri Nötr)
   static const Color brandColor = Color.fromARGB(255, 178, 181, 255);
-
+  static const Color darkGrey = Color.fromARGB(255, 0, 0, 0);
   // Değişken isimleri ve imzaları birebir korundu
-  static const Color primaryNavy = Color.fromARGB(255, 121, 131, 200); // Ana Vurgu / Butonlar - Koyu Antrasit/Kömür
-  static const Color darkNavy = Color(0xFF19181B); // Başlık/İkon - Siyah
-  static const Color secondaryNavy = Color.fromARGB(255, 104, 102, 179); // İkincil Ton - #C0BBC8
+  static const Color primaryNavy = Color.fromARGB(255, 190, 195, 250); // Ana Vurgu / Butonlar - Koyu Antrasit/Kömür
+  static const Color darkNavy = Color.fromARGB(255, 27, 26, 30); // Başlık/İkon - Siyah
+  static const Color secondaryNavy = Color.fromARGB(255, 140, 138, 188); // İkincil Ton - #C0BBC8
 
   static const Color backgroundColor = Color(0xFFF7F6F8); // Sayfa Zemin Rengi - Çok Hafif Soft Gri
   static const Color surfaceColor = Color(0xFFFFFFFF); // Kart ve Input Dolgu Rengi - Beyaz
@@ -59,8 +59,8 @@ class AppTheme {
           ),
         ),
         backgroundColor: isError
-            ? errorColor
-            : (isDark ? darkAccentBlue : primaryNavy),
+            ? const Color.fromARGB(155, 155, 10, 10)
+            : (isDark ? const Color.fromARGB(255, 96, 96, 116) : const Color.fromARGB(255, 87, 90, 110)),
         behavior: SnackBarBehavior.floating,
         elevation: 2,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -72,14 +72,14 @@ class AppTheme {
   static ThemeData get lightTheme {
     return ThemeData(
       useMaterial3: true,
-      scaffoldBackgroundColor: backgroundColor,
+      scaffoldBackgroundColor: Color.fromARGB(255, 253, 253, 255),
 
       colorScheme: ColorScheme.fromSeed(
         seedColor: primaryNavy,
         primary: primaryNavy,
         secondary: secondaryNavy,
         surface: surfaceColor,
-        onSurface: textColor,
+        onSurface: const Color.fromARGB(255, 0, 0, 0),
         brightness: Brightness.light,
       ),
 
@@ -100,14 +100,14 @@ class AppTheme {
 
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
-          foregroundColor: primaryNavy,
+          foregroundColor: const Color.fromARGB(255, 89, 100, 170),
           textStyle: const TextStyle(fontWeight: FontWeight.w600),
         ),
       ),
 
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: primaryNavy,
+          backgroundColor: darkAccentBlue,
           foregroundColor: Colors.white,
           minimumSize: const Size(double.infinity, 52),
           elevation: 0,
@@ -150,7 +150,7 @@ class AppTheme {
 
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: errorColor),
+          borderSide: const BorderSide(color: Color.fromARGB(255, 129, 13, 13)),
         ),
       ),
 
@@ -165,7 +165,7 @@ class AppTheme {
           fontWeight: FontWeight.bold,
           color: textColor,
         ),
-        bodyLarge: TextStyle(fontSize: smallFont, color: textColor),
+        bodyLarge: TextStyle(fontSize: smallFont, color: Color.fromARGB(255, 0, 0, 0)),
         bodyMedium: TextStyle(fontSize: inputFont, color: Color.fromARGB(255, 0, 0, 0)),
       ),
     );
@@ -203,15 +203,15 @@ class AppTheme {
 
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
-          foregroundColor: darkAccentBlue,
+          foregroundColor: const Color.fromARGB(255, 142, 145, 213),
           textStyle: const TextStyle(fontWeight: FontWeight.w600),
         ),
       ),
 
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: primaryNavy, // Koyu modda #C0BBC8 öne çıkan buton
-          foregroundColor: darkBackgroundColor, // Yazı rengi koyu
+          backgroundColor: secondaryNavy, // Koyu modda #C0BBC8 öne çıkan buton
+          foregroundColor: const Color.fromARGB(255, 12, 11, 13), // Yazı rengi koyu
           minimumSize: const Size(double.infinity, 52),
           elevation: 0,
           shadowColor: Colors.black45,
@@ -253,7 +253,7 @@ class AppTheme {
 
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: errorColor),
+          borderSide: const BorderSide(color: Color.fromARGB(255, 121, 22, 22)),
         ),
       ),
 

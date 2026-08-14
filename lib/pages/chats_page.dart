@@ -51,6 +51,7 @@ class _ChatsPageState extends State<ChatsPage> {
   Timer? _messagesTimer;
   StreamSubscription<RemoteMessage>? _fcmSubscription;
   final Set<String> _expandedMessages = {};
+  final Set<String> _pendingDeleteIds = {};
 
   void _scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -413,7 +414,7 @@ class _ChatsPageState extends State<ChatsPage> {
               ),
               onPressed: () {
                 Navigator.pop(context);
-                _deleteMessage(index, message);
+                _scheduleDeleteMessage(index, message);
               },
               child: const Text("Sil", style: TextStyle(color: Colors.white)),
             ),
@@ -456,6 +457,7 @@ class _ChatsPageState extends State<ChatsPage> {
         if (!mounted) return;
 
         setState(() {
+          _pendingDeleteIds.remove(messageId.toString());
           messages[index]["is_deleted"] = true;
           messages[index]["message"] = null;
           messages[index]["image_url"] = null;
@@ -489,6 +491,71 @@ class _ChatsPageState extends State<ChatsPage> {
         isError: true,
       );
     }
+  }
+
+  void _scheduleDeleteMessage(int index, Map<String, dynamic> message) {
+    final messageId = message["message_id"] ?? message["id"];
+
+    if (messageId == null) {
+      AppTheme.showSnackBar(
+        context,
+        message: "Mesaj bilgisi alınamadı.",
+        isError: true,
+      );
+      return;
+    }
+
+    final String messageIdString = messageId.toString();
+
+    // Mesajı 5 saniyeliğine geçici olarak silinmiş göster
+    setState(() {
+      _pendingDeleteIds.add(messageIdString);
+    });
+
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text("Bu mesaj silindi"),
+        duration: const Duration(seconds: 5),
+        behavior: SnackBarBehavior.floating,
+        action: SnackBarAction(
+          label: "GERİ AL",
+          onPressed: () {
+            if (!mounted) return;
+
+            setState(() {
+              _pendingDeleteIds.remove(messageIdString);
+            });
+          },
+        ),
+      ),
+    );
+
+    // 5 saniye bekle
+    Future.delayed(const Duration(seconds: 5), () async {
+      if (!mounted) return;
+
+      // Kullanıcı GERİ AL'a bastıysa hiçbir şey yapma
+      if (!_pendingDeleteIds.contains(messageIdString)) {
+        return;
+      }
+
+      // Refresh sırasında index değişmiş olabilir.
+      // Bu yüzden mesajı ID ile tekrar buluyoruz.
+      final currentIndex = messages.indexWhere((item) {
+        final id = item["message_id"] ?? item["id"];
+        return id?.toString() == messageIdString;
+      });
+
+      if (currentIndex == -1) {
+        _pendingDeleteIds.remove(messageIdString);
+        return;
+      }
+
+      // 5 saniye geçti → GERÇEK backend silme
+      await _deleteMessage(currentIndex, messages[currentIndex]);
+    });
   }
 
   Future<void> loadMessages() async {
@@ -556,6 +623,16 @@ class _ChatsPageState extends State<ChatsPage> {
       }
 
       setState(() {
+        for (final newMessage in newMessages) {
+          final id = newMessage["message_id"] ?? newMessage["id"];
+
+          if (id != null && _pendingDeleteIds.contains(id.toString())) {
+            newMessage["is_deleted"] = true;
+            newMessage["message"] = null;
+            newMessage["image_url"] = null;
+          }
+        }
+
         messages = newMessages;
       });
 
@@ -710,6 +787,7 @@ class _ChatsPageState extends State<ChatsPage> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (context) {
+        final onSurfaceColor = Theme.of(context).colorScheme.onSurface;
         return SafeArea(
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
@@ -720,40 +798,66 @@ class _ChatsPageState extends State<ChatsPage> {
                   width: 36,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
+                    color: onSurfaceColor.withAlpha(45),
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
                 const SizedBox(height: 16),
                 ListTile(
-                  leading: CircleAvatar(
-                    backgroundColor: AppTheme.primaryNavy.withAlpha(15),
+                  leading: Container(
+                    width: 44,
+                    height: 44,
+                    decoration: const BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: LinearGradient(
+                        colors: [AppTheme.primaryNavy, AppTheme.secondaryNavy],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                    ),
                     child: const Icon(
                       Icons.camera_alt_rounded,
-                      color: AppTheme.primaryNavy,
+                      color: Colors.white,
+                      size: 20,
                     ),
                   ),
-                  title: const Text(
+                  title: Text(
                     "Kamera",
-                    style: TextStyle(fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      color: onSurfaceColor,
+                    ),
                   ),
                   onTap: () {
                     Navigator.pop(context);
                     _pickAndSendImage(ImageSource.camera);
                   },
                 ),
-                const Divider(),
+                const Divider(height: 1),
                 ListTile(
-                  leading: CircleAvatar(
-                    backgroundColor: AppTheme.primaryNavy.withAlpha(15),
+                  leading: Container(
+                    width: 44,
+                    height: 44,
+                    decoration: const BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: LinearGradient(
+                        colors: [AppTheme.primaryNavy, AppTheme.secondaryNavy],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                    ),
                     child: const Icon(
                       Icons.photo_library_rounded,
-                      color: AppTheme.primaryNavy,
+                      color: Colors.white,
+                      size: 20,
                     ),
                   ),
-                  title: const Text(
+                  title: Text(
                     "Galeri",
-                    style: TextStyle(fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      color: onSurfaceColor,
+                    ),
                   ),
                   onTap: () {
                     Navigator.pop(context);
@@ -790,9 +894,24 @@ class _ChatsPageState extends State<ChatsPage> {
         preferredSize: const Size.fromHeight(85),
         child: ClipRect(
           child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+            filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
             child: Container(
-              color: surfaceColor.withAlpha(200),
+              decoration: BoxDecoration(
+                color: surfaceColor.withAlpha(205),
+                border: Border(
+                  bottom: BorderSide(
+                    color: onSurfaceColor.withAlpha(12),
+                    width: 1,
+                  ),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withAlpha(6),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
               child: SafeArea(
                 bottom: false,
                 child: AppBar(
@@ -836,6 +955,15 @@ class _ChatsPageState extends State<ChatsPage> {
                                             end: Alignment.bottomRight,
                                           )
                                         : null,
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: AppTheme.primaryNavy.withAlpha(
+                                          40,
+                                        ),
+                                        blurRadius: 8,
+                                        offset: const Offset(0, 3),
+                                      ),
+                                    ],
                                   ),
                                   alignment: Alignment.center,
                                   child: fullHeaderPhotoUrl != null
@@ -931,19 +1059,31 @@ class _ChatsPageState extends State<ChatsPage> {
                     itemCount: messages.length,
                     itemBuilder: (context, index) {
                       final message = messages[index];
+
                       final bool me =
                           message["sender_id"].toString() ==
                           currentUserId.toString();
+
                       final String formattedTime = _formatTime(
                         message["timestamp"],
                       );
+
                       final String? imageUrl = message["image_url"];
 
+                      final messageId = message["message_id"] ?? message["id"];
+
+                      final bool isDeleted =
+                          message["is_deleted"] == true ||
+                          (messageId != null &&
+                              _pendingDeleteIds.contains(messageId.toString()));
+
+                      // Mesaj silindiyse fotoğrafı da hemen gizle
                       final String? fullMsgImageUrl =
-                          (imageUrl != null && imageUrl.isNotEmpty)
+                          (!isDeleted &&
+                              imageUrl != null &&
+                              imageUrl.isNotEmpty)
                           ? "${ApiClient.baseUrl}${imageUrl.startsWith('/') ? imageUrl : '/$imageUrl'}"
                           : null;
-                      final bool isDeleted = message["is_deleted"] == true;
 
                       final String messageText = isDeleted
                           ? "Bu mesaj silindi"
@@ -988,20 +1128,36 @@ class _ChatsPageState extends State<ChatsPage> {
                               vertical: 10,
                             ),
                             decoration: BoxDecoration(
-                              color: me
-                                  ? AppTheme.primaryNavy
-                                  : surfaceColor.withAlpha(220),
+                              gradient: me
+                                  ? const LinearGradient(
+                                      colors: [
+                                        AppTheme.primaryNavy,
+                                        AppTheme.secondaryNavy,
+                                      ],
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                    )
+                                  : null,
+                              color: me ? null : surfaceColor.withAlpha(225),
                               borderRadius: BorderRadius.only(
                                 topLeft: const Radius.circular(20),
                                 topRight: const Radius.circular(20),
                                 bottomLeft: Radius.circular(me ? 20 : 4),
                                 bottomRight: Radius.circular(me ? 4 : 20),
                               ),
+                              border: me
+                                  ? null
+                                  : Border.all(
+                                      color: onSurfaceColor.withAlpha(14),
+                                      width: 1,
+                                    ),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.black.withAlpha(10),
-                                  blurRadius: 5,
-                                  offset: const Offset(0, 2),
+                                  color: me
+                                      ? AppTheme.primaryNavy.withAlpha(45)
+                                      : Colors.black.withAlpha(10),
+                                  blurRadius: me ? 14 : 6,
+                                  offset: const Offset(0, 3),
                                 ),
                               ],
                             ),
@@ -1105,9 +1261,7 @@ class _ChatsPageState extends State<ChatsPage> {
                                                     ? FontStyle.italic
                                                     : FontStyle.normal,
                                                 color: isDeleted
-                                                    ? Color.fromARGB(255, 182, 183, 190)
-                                                      
-                                                  
+                                                    ? Color.fromARGB(255, 132, 131, 131)
                                                     : me
                                                     ? AppTheme.backgroundColor
                                                     : onSurfaceColor,
@@ -1188,63 +1342,116 @@ class _ChatsPageState extends State<ChatsPage> {
 
           SafeArea(
             top: false,
-            child: Container(
-              padding: const EdgeInsets.fromLTRB(12, 8, 16, 12),
-              child: Row(
-                children: [
-                  IconButton(
-                    onPressed: isSendingImage ? null : _showMediaOptions,
-                    icon: isSendingImage
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : Icon(
-                            Icons.add_circle_outline_rounded,
-                            color: Theme.of(context).colorScheme.primary,
-                            size: 28,
-                          ),
-                  ),
-
-                  Expanded(
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: surfaceColor.withAlpha(220),
-                        borderRadius: BorderRadius.circular(50),
+            child: ClipRRect(
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+                child: Container(
+                  padding: const EdgeInsets.fromLTRB(10, 10, 14, 12),
+                  decoration: BoxDecoration(
+                    color: surfaceColor.withAlpha(
+                      Theme.of(context).brightness == Brightness.dark
+                          ? 150
+                          : 210,
+                    ),
+                    border: Border(
+                      top: BorderSide(
+                        color: onSurfaceColor.withAlpha(14),
+                        width: 1,
                       ),
-                      child: TextField(
-                        controller: _messageController,
-                        style: TextStyle(color: onSurfaceColor),
-                        onSubmitted: (_) => _sendMessage(),
-                        decoration: InputDecoration(
-                          hintText: "Mesaj yaz...",
-                          hintStyle: TextStyle(
-                            color: onSurfaceColor.withAlpha(120),
+                    ),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Container(
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.primary.withAlpha(16),
+                        ),
+                        child: IconButton(
+                          onPressed: isSendingImage ? null : _showMediaOptions,
+                          icon: isSendingImage
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : Icon(
+                                  Icons.add_rounded,
+                                  color: Theme.of(context).colorScheme.primary,
+                                  size: 26,
+                                ),
+                        ),
+                      ),
+
+                      Expanded(
+                        child: Container(
+                          margin: const EdgeInsets.symmetric(horizontal: 8),
+                          decoration: BoxDecoration(
+                            color: onSurfaceColor.withAlpha(10),
+                            borderRadius: BorderRadius.circular(50),
+                            border: Border.all(
+                              color: onSurfaceColor.withAlpha(16),
+                              width: 1,
+                            ),
                           ),
-                          border: InputBorder.none,
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 20,
-                            vertical: 13,
+                          child: TextField(
+                            controller: _messageController,
+                            style: TextStyle(color: onSurfaceColor),
+                            onSubmitted: (_) => _sendMessage(),
+                            decoration: InputDecoration(
+                              hintText: "Mesaj yaz...",
+                              hintStyle: TextStyle(
+                                color: onSurfaceColor.withAlpha(120),
+                              ),
+                              border: InputBorder.none,
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 20,
+                                vertical: 13,
+                              ),
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  InkWell(
-                    onTap: _sendMessage,
-                    child: const CircleAvatar(
-                      radius: 23,
-                      backgroundColor: AppTheme.primaryNavy,
-                      child: Icon(
-                        Icons.send_rounded,
-                        color: Colors.white,
-                        size: 20,
+                      Container(
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: const LinearGradient(
+                            colors: [
+                              AppTheme.primaryNavy,
+                              AppTheme.secondaryNavy,
+                            ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppTheme.primaryNavy.withAlpha(70),
+                              blurRadius: 12,
+                              offset: const Offset(0, 5),
+                            ),
+                          ],
+                        ),
+                        child: InkWell(
+                          customBorder: const CircleBorder(),
+                          onTap: _sendMessage,
+                          child: const Padding(
+                            padding: EdgeInsets.all(13),
+                            child: Icon(
+                              Icons.send_rounded,
+                              color: Colors.white,
+                              size: 20,
+                            ),
+                          ),
+                        ),
                       ),
-                    ),
+                    ],
                   ),
-                ],
+                ),
               ),
             ),
           ),

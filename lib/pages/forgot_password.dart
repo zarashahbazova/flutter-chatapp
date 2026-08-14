@@ -1,26 +1,30 @@
 import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:Lafla/themes/tema1.dart';
 import '../services/api_client.dart';
+import 'reset_password.dart';
 
 class ForgotPasswordPage extends StatefulWidget {
   const ForgotPasswordPage({super.key});
 
   @override
-  State<ForgotPasswordPage> createState() => _ForgotPasswordPageState();
+  State<ForgotPasswordPage> createState() =>
+      _ForgotPasswordPageState();
 }
 
 class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
   final _formKey = GlobalKey<FormState>();
 
-  final _usernameController = TextEditingController();
-  final _emailController = TextEditingController();
+  final TextEditingController _usernameController =
+      TextEditingController();
 
-  final _passwordController = TextEditingController();
-  final _confirmPasswordController = TextEditingController();
-
-  bool _verified = false;
+  final TextEditingController _emailController =
+      TextEditingController();
 
   final ApiClient api = ApiClient();
+
+  bool _loading = false;
 
   @override
   void dispose() {
@@ -29,209 +33,176 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
     super.dispose();
   }
 
-  String? _validateEmail(String? value) {
-    if (value == null || value.trim().isEmpty) {
-      return "E-posta giriniz.";
-    }
-
-    final regex = RegExp(r'^[^@]+@[^@]+\.[^@]+');
-
-    if (!regex.hasMatch(value.trim())) {
-      return "Geçerli bir e-posta giriniz.";
-    }
-
-    return null;
-  }
-
   String? _validateUsername(String? value) {
     if (value == null || value.trim().isEmpty) {
-      return "Kullanıcı adı giriniz.";
+      return "Kullanıcı adınızı giriniz.";
+    }
+    return null;
+  }
+
+  String? _validateEmail(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return "Email adresinizi giriniz.";
+    }
+
+    final emailRegex = RegExp(
+      r'^[^@\s]+@[^@\s]+\.[^@\s]+$',
+    );
+
+    if (!emailRegex.hasMatch(value.trim())) {
+      return "Geçerli bir email adresi giriniz.";
     }
 
     return null;
   }
 
-  String? _validatePassword(String? value) {
-    if (value == null || value.isEmpty) {
-      return "Şifre giriniz.";
-    }
-
-    if (value.length < 6) {
-      return "En az 6 karakter olmalıdır.";
-    }
-
-    if (!RegExp(r'(?=.*[A-Z])').hasMatch(value)) {
-      return "En az bir büyük harf içermelidir.";
-    }
-
-    if (!RegExp(r'(?=.*[a-z])').hasMatch(value)) {
-      return "En az bir küçük harf içermelidir.";
-    }
-
-    if (!RegExp(r'(?=.*\d)').hasMatch(value)) {
-      return "En az bir rakam içermelidir.";
-    }
-
-    return null;
-  }
-
-  String? _validateConfirmPassword(String? value) {
-    if (value == null || value.isEmpty) {
-      return "Şifreyi tekrar giriniz.";
-    }
-
-    if (value != _passwordController.text) {
-      return "Şifreler uyuşmuyor.";
-    }
-
-    return null;
-  }
-
-  Future<void> _verifyUser() async {
+  Future<void> _checkUser() async {
     if (!_formKey.currentState!.validate()) return;
 
+    setState(() {
+      _loading = true;
+    });
+
     try {
-      final response = await api.post(
-        url: "auth/verify-user",
-        body: {
-          "username": _usernameController.text.trim(),
-          "email": _emailController.text.trim(),
-        },
+      final response = await api.checkUser(
+        userName: _usernameController.text.trim(),
+        email: _emailController.text.trim(),
       );
-      print(response.statusCode);
-      print(response.body);
 
       final data = jsonDecode(response.body);
 
       if (!mounted) return;
 
       if (response.statusCode == 200) {
+        final resetToken = data["data"]?["resetToken"];
+
+        if (resetToken == null) {
+          throw Exception(
+            "Backend reset token göndermedi.",
+          );
+        }
+
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ResetPasswordPage(
+              resetToken: resetToken,
+            ),
+          ),
+        );
+      } else {
+        AppTheme.showSnackBar(
+          context,
+          message:
+              data["error"] ??
+              "Kullanıcı bilgileri doğrulanamadı.",
+          isError: true,
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+
+      AppTheme.showSnackBar(
+        context,
+        message: "Sunucuya bağlanılamadı.\n$e",
+        isError: true,
+      );
+    } finally {
+      if (mounted) {
         setState(() {
-          _verified = true;
+          _loading = false;
         });
-
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text("Kullanıcı doğrulandı.")));
-      } else {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(data["error"])));
       }
-    } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(e.toString())));
-    }
-  }
-
-  Future<void> _changePassword() async {
-    if (!_formKey.currentState!.validate()) return;
-
-    try {
-      final response = await api.put(
-        url: "auth/check-user",
-        body: {
-          "email": _emailController.text.trim(),
-          "password": _passwordController.text,
-        },
-      );
-
-      final data = jsonDecode(response.body);
-
-      if (!mounted) return;
-
-      if (response.statusCode == 200) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(data["message"])));
-
-        Navigator.pop(context);
-      } else {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(data["error"])));
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(e.toString())));
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Şifre Sıfırla")),
-      body: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            children: [
-              const Text(
-                "Kayıtlı e-posta adresinizi giriniz.",
-                textAlign: TextAlign.center,
-              ),
+      appBar: AppBar(
+        title: const Text("Şifreyi Sıfırla"),
+      ),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(28),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const SizedBox(height: 30),
 
-              const SizedBox(height: 24),
-              TextFormField(
-                controller: _usernameController,
-                validator: _validateUsername,
-                decoration: const InputDecoration(
-                  labelText: "Kullanıcı adı",
-                  prefixIcon: Icon(Icons.person),
+                Icon(
+                  Icons.lock_reset_rounded,
+                  size: 70,
+                  color:
+                      Theme.of(context).colorScheme.primary,
                 ),
-              ),
 
-              const SizedBox(height: 20),
+                const SizedBox(height: 24),
 
-              TextFormField(
-                controller: _emailController,
-                keyboardType: TextInputType.emailAddress,
-                validator: _validateEmail,
-                decoration: const InputDecoration(
-                  labelText: "E-posta",
-                  prefixIcon: Icon(Icons.email),
+                Text(
+                  "Şifreni mi unuttun?",
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context)
+                      .textTheme
+                      .headlineSmall
+                      ?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
                 ),
-              ),
-              if (_verified) ...[
-                const SizedBox(height: 20),
+
+                const SizedBox(height: 8),
+
+                Text(
+                  "Şifreni sıfırlamak için kullanıcı adı ve email adresini gir.",
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context)
+                      .textTheme
+                      .bodyMedium,
+                ),
+
+                const SizedBox(height: 32),
 
                 TextFormField(
-                  controller: _passwordController,
-                  obscureText: true,
-                  validator: _validatePassword,
+                  controller: _usernameController,
+                  validator: _validateUsername,
                   decoration: const InputDecoration(
-                    labelText: "Yeni Şifre",
-                    prefixIcon: Icon(Icons.lock),
+                    labelText: "Kullanıcı Adı",
+                    prefixIcon: Icon(Icons.person),
                   ),
                 ),
 
                 const SizedBox(height: 16),
 
                 TextFormField(
-                  controller: _confirmPasswordController,
-                  obscureText: true,
-                  validator: _validateConfirmPassword,
+                  controller: _emailController,
+                  keyboardType:
+                      TextInputType.emailAddress,
+                  validator: _validateEmail,
                   decoration: const InputDecoration(
-                    labelText: "Şifre Tekrar",
-                    prefixIcon: Icon(Icons.lock_outline),
+                    labelText: "Email",
+                    prefixIcon: Icon(Icons.email),
                   ),
+                ),
+
+                const SizedBox(height: 28),
+
+                ElevatedButton(
+                  onPressed: _loading ? null : _checkUser,
+                  child: _loading
+                      ? const SizedBox(
+                          width: 22,
+                          height: 22,
+                          child:
+                              CircularProgressIndicator(
+                            strokeWidth: 2,
+                          ),
+                        )
+                      : const Text("Devam Et"),
                 ),
               ],
-              const SizedBox(height: 32),
-
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _verified ? _changePassword : _verifyUser,
-                  child: Text(
-                    _verified ? "Şifreyi Güncelle" : "Kullanıcıyı Doğrula",
-                  ),
-                ),
-              ),
-            ],
+            ),
           ),
         ),
       ),
