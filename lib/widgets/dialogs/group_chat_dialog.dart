@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:stajapp/themes/tema1.dart';
+import 'package:Lafla/themes/tema1.dart';
 import '../../services/api_client.dart';
 
 class GroupChatDialog extends StatefulWidget {

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:stajapp/pages/messages_page.dart';
-import 'package:stajapp/themes/tema1.dart';
+import 'package:Lafla/pages/messages_page.dart';
+import 'package:Lafla/themes/tema1.dart';
 import '../services/api_client.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 

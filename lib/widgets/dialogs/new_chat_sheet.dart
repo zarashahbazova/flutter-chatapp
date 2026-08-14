@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:stajapp/themes/tema1.dart';
+import 'package:Lafla/themes/tema1.dart';
 
 class NewChatSheet extends StatelessWidget {
   final VoidCallback onSingleChatTap;

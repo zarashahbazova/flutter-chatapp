@@ -2,8 +2,8 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
-import 'package:stajapp/themes/tema1.dart';
-import 'package:stajapp/widgets/dialogs/user_profile_dialog.dart';
+import 'package:Lafla/themes/tema1.dart';
+import 'package:Lafla/widgets/dialogs/user_profile_dialog.dart';
 import '../services/api_client.dart';
 
 class GroupDetailPage extends StatefulWidget {

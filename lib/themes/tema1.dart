@@ -6,7 +6,7 @@ class AppTheme {
   static const Color brandColor = Color.fromARGB(255, 178, 181, 255);
 
   // Değişken isimleri ve imzaları birebir korundu
-  static const Color primaryNavy = Color.fromARGB(255, 96, 106, 171); // Ana Vurgu / Butonlar - Koyu Antrasit/Kömür
+  static const Color primaryNavy = Color.fromARGB(255, 121, 131, 200); // Ana Vurgu / Butonlar - Koyu Antrasit/Kömür
   static const Color darkNavy = Color(0xFF19181B); // Başlık/İkon - Siyah
   static const Color secondaryNavy = Color.fromARGB(255, 104, 102, 179); // İkincil Ton - #C0BBC8
 

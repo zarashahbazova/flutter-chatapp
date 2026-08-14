@@ -5,7 +5,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:stajapp/themes/tema1.dart';
+import 'package:Lafla/themes/tema1.dart';
 import 'chats_page.dart';
 import 'profile.dart';
 import '../services/api_client.dart';
@@ -567,85 +567,79 @@ class _MessagesPageState extends State<MessagesPage> {
   }
 
   // 1. SOHBETİ TAMAMEN SİLME
-Future<void> _deleteChat(Map<String, dynamic> user) async {
-  if (token == null || currentUserId == null) return;
+  Future<void> _deleteChat(Map<String, dynamic> user) async {
+    if (token == null || currentUserId == null) return;
 
-  final roomId = user["room_id"];
-  final bool isGroup = user["is_group"] == true;
+    final roomId = user["room_id"];
+    final bool isGroup = user["is_group"] == true;
 
-  if (roomId == null) {
-    AppTheme.showSnackBar(
-      context,
-      message: "Sohbet bilgisi bulunamadı.",
-      isError: true,
-    );
-    return;
-  }
+    if (roomId == null) {
+      AppTheme.showSnackBar(
+        context,
+        message: "Sohbet bilgisi bulunamadı.",
+        isError: true,
+      );
+      return;
+    }
 
-  try {
-    late http.Response response;
+    try {
+      late http.Response response;
 
-    if (isGroup) {
-      final adminId = user["admin_id"];
+      if (isGroup) {
+        final adminId = user["admin_id"];
 
-      if (adminId == null ||
-          adminId.toString() != currentUserId.toString()) {
-        AppTheme.showSnackBar(
-          context,
-          message: "Bu grubu sadece grup yöneticisi silebilir.",
-          isError: true,
-        );
-        return;
+        if (adminId == null || adminId.toString() != currentUserId.toString()) {
+          AppTheme.showSnackBar(
+            context,
+            message: "Bu grubu sadece grup yöneticisi silebilir.",
+            isError: true,
+          );
+          return;
+        }
       }
 
-      response = await api.deleteGroup(
-        token: token!,
-        roomId: int.parse(roomId.toString()),
-        adminId: currentUserId!,
-      );
-    } else {
-      response = await api.deletePrivateChat(
+      response = await api.deleteRoom(
         token: token!,
         roomId: int.parse(roomId.toString()),
         userId: currentUserId!,
       );
-    }
 
-    if (response.statusCode == 200) {
-      if (!mounted) return;
+      if (response.statusCode == 200) {
+        if (!mounted) return;
 
-      setState(() {
-        users.removeWhere(
-          (item) => item["room_id"].toString() == roomId.toString(),
+        setState(() {
+          users.removeWhere(
+            (item) => item["room_id"].toString() == roomId.toString(),
+          );
+        });
+
+        AppTheme.showSnackBar(
+          context,
+          message: "Sohbet silindi.",
+          isError: false,
         );
-      });
+      } else {
+        final data = jsonDecode(response.body);
 
-      AppTheme.showSnackBar(
-        context,
-        message: "Sohbet silindi.",
-        isError: false,
-      );
-    } else {
-      final data = jsonDecode(response.body);
+        if (!mounted) return;
 
+        AppTheme.showSnackBar(
+          context,
+          message: data["error"] ?? "Sohbet silinemedi.",
+          isError: true,
+        );
+      }
+    } catch (e) {
       if (!mounted) return;
 
       AppTheme.showSnackBar(
         context,
-        message: data["error"] ?? "Sohbet silinemedi.",
+        message: "Sohbet silinirken hata oluştu: $e",
         isError: true,
       );
     }
-  } catch (e) {
-    if (!mounted) return;
-
-    AppTheme.showSnackBar(
-      context,
-      message: "Sohbet silinirken hata oluştu: $e",
-      isError: true,
-    );
   }
-}
+
   // 2. Sadece MESAJLARI SİLME (Sohbet Kutusunu Tutma)
   Future<void> _clearChatMessages(dynamic roomId) async {
     setState(() {
@@ -730,8 +724,9 @@ Future<void> _deleteChat(Map<String, dynamic> user) async {
                                 borderRadius: BorderRadius.circular(16),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: theme.colorScheme.primary
-                                        .withAlpha(80),
+                                    color: theme.colorScheme.primary.withAlpha(
+                                      80,
+                                    ),
                                     blurRadius: 8,
                                     offset: const Offset(0, 2),
                                   ),
@@ -772,8 +767,9 @@ Future<void> _deleteChat(Map<String, dynamic> user) async {
                           clipBehavior: Clip.antiAlias,
                           child: InkWell(
                             onTap: _openNewChatOptions,
-                            splashColor:
-                                theme.colorScheme.primary.withAlpha(30),
+                            splashColor: theme.colorScheme.primary.withAlpha(
+                              30,
+                            ),
                             child: Container(
                               width: 42,
                               height: 42,
@@ -781,8 +777,9 @@ Future<void> _deleteChat(Map<String, dynamic> user) async {
                                 color: theme.colorScheme.primary.withAlpha(12),
                                 shape: BoxShape.circle,
                                 border: Border.all(
-                                  color:
-                                      theme.colorScheme.primary.withAlpha(25),
+                                  color: theme.colorScheme.primary.withAlpha(
+                                    25,
+                                  ),
                                   width: 1.2,
                                 ),
                               ),
@@ -810,10 +807,7 @@ Future<void> _deleteChat(Map<String, dynamic> user) async {
                 _selectedIndex = index;
               });
             },
-            children: [
-              _page(),
-              const ProfilePage(),
-            ],
+            children: [_page(), const ProfilePage()],
           ),
 
           Positioned(
@@ -844,8 +838,8 @@ Future<void> _deleteChat(Map<String, dynamic> user) async {
   Widget _page() {
     final filteredUsers = users.where((user) {
       final matchesSearch = user["name"].toString().toLowerCase().contains(
-            _searchText.toLowerCase(),
-          );
+        _searchText.toLowerCase(),
+      );
 
       bool matchesFilter = true;
 
@@ -1019,7 +1013,9 @@ Future<void> _deleteChat(Map<String, dynamic> user) async {
             (user) => MessageTile(
               user: user,
               onTap: () => _handleTileTap(user),
-              onLongPress: () => _showChatOptionsMenu(user), // 👈 Basılı tutunca seçenek menüsü
+              onLongPress: () => _showChatOptionsMenu(
+                user,
+              ), // 👈 Basılı tutunca seçenek menüsü
             ),
           ),
       ],

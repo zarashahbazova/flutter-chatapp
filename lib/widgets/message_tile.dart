@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:stajapp/services/api_client.dart';
-import 'package:stajapp/themes/tema1.dart';
+import 'package:Lafla/services/api_client.dart';
+import 'package:Lafla/themes/tema1.dart';
 
 class MessageTile extends StatelessWidget {
   final Map<String, dynamic> user;
