@@ -98,7 +98,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
     showModalBottomSheet(
       context: context,
-      backgroundColor: Theme.of(context).colorScheme.surface,
+      backgroundColor: AppTheme.getSurfaceColor(isDark),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -123,12 +123,12 @@ class _EditProfilePageState extends State<EditProfilePage> {
                     width: 40,
                     height: 40,
                     decoration: BoxDecoration(
-                      color: isDark ? const Color(0xFF141316) : const Color(0xFFF3F2F5),
+                      color: AppTheme.getIconBg(isDark),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Icon(
                       Icons.camera_alt_rounded,
-                      color: isDark ? Colors.white70 : const Color(0xFF19181B),
+                      color: AppTheme.getIconFg(isDark),
                       size: 20,
                     ),
                   ),
@@ -151,12 +151,12 @@ class _EditProfilePageState extends State<EditProfilePage> {
                     width: 40,
                     height: 40,
                     decoration: BoxDecoration(
-                      color: isDark ? const Color(0xFF141316) : const Color(0xFFF3F2F5),
+                      color: AppTheme.getIconBg(isDark),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Icon(
                       Icons.photo_library_rounded,
-                      color: isDark ? Colors.white70 : const Color(0xFF19181B),
+                      color: AppTheme.getIconFg(isDark),
                       size: 20,
                     ),
                   ),
@@ -182,8 +182,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final onSurfaceColor = theme.colorScheme.onSurface;
-    final surfaceColor = isDark ? AppTheme.darkSurfaceColor : AppTheme.surfaceColor;
-    final subColor = isDark ? const Color(0xFF8E8B94) : const Color(0xFF827E8C);
+    final surfaceColor = AppTheme.getSurfaceColor(isDark);
+    final subColor = AppTheme.getSectionHeaderColor(isDark);
 
     final String firstLetter = widget.currentName.isNotEmpty
         ? widget.currentName[0].toUpperCase()
@@ -216,14 +216,13 @@ class _EditProfilePageState extends State<EditProfilePage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 📸 ÜST ALAN (Siyah-Beyaz Temiz Kart)
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   color: surfaceColor,
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
-                    color: isDark ? const Color(0xFF2C2A31) : const Color(0xFFE8E6ED),
+                    color: isDark ? const Color.fromARGB(255, 15, 14, 17) : const Color(0xFFE8E6ED),
                     width: 1.1,
                   ),
                   boxShadow: [
@@ -236,13 +235,12 @@ class _EditProfilePageState extends State<EditProfilePage> {
                 ),
                 child: Row(
                   children: [
-                    // Köşeleri yuvarlak kare profil fotoğrafı
                     ClipRRect(
                       borderRadius: BorderRadius.circular(16),
                       child: Container(
                         width: 74,
                         height: 74,
-                        color: isDark ? const Color(0xFF141316) : const Color(0xFFF3F2F5),
+                        color: AppTheme.getIconBg(isDark),
                         child: fullPhotoUrl != null
                             ? Image.network(
                                 fullPhotoUrl,
@@ -270,10 +268,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                               ),
                       ),
                     ),
-
                     const SizedBox(width: 16),
-
-                    // Fotoğraf değiştirme / Butonlar
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -295,7 +290,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                             icon: Icon(
                               Icons.edit_outlined,
                               size: 14,
-                              color: isDark ? Colors.white70 : const Color(0xFF19181B),
+                              color: AppTheme.getIconFg(isDark),
                             ),
                             label: Text(
                               "Fotoğrafı Değiştir",
@@ -330,10 +325,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                   ],
                 ),
               ),
-
               const SizedBox(height: 24),
-
-              // BİLGİ DÜZENLEME INPUTLARI (Sade & Siyah-Beyaz Uyumlu)
               Padding(
                 padding: const EdgeInsets.only(left: 4, bottom: 8),
                 child: Text(
@@ -346,32 +338,24 @@ class _EditProfilePageState extends State<EditProfilePage> {
                   ),
                 ),
               ),
-
               TextFormField(
                 controller: _nameController,
                 style: TextStyle(color: onSurfaceColor),
                 decoration: InputDecoration(
                   labelText: "Ad Soyad",
-                  prefixIcon: Icon(
-                    Icons.person_outline_rounded,
-                    color: subColor,
-                  ),
+                  prefixIcon: Icon(Icons.person, color: subColor),
                 ),
                 validator: (v) => (v == null || v.trim().isEmpty)
                     ? "Adınızı giriniz."
                     : null,
               ),
               const SizedBox(height: 14),
-
               TextFormField(
                 controller: _usernameController,
                 style: TextStyle(color: onSurfaceColor),
                 decoration: InputDecoration(
                   labelText: "Kullanıcı Adı",
-                  prefixIcon: Icon(
-                    Icons.alternate_email_rounded,
-                    color: subColor,
-                  ),
+                  prefixIcon: Icon(Icons.alternate_email_rounded, color: subColor),
                 ),
                 validator: (v) {
                   if (v == null || v.trim().isEmpty) {
@@ -384,17 +368,13 @@ class _EditProfilePageState extends State<EditProfilePage> {
                 },
               ),
               const SizedBox(height: 14),
-
               TextFormField(
                 controller: _emailController,
                 keyboardType: TextInputType.emailAddress,
                 style: TextStyle(color: onSurfaceColor),
                 decoration: InputDecoration(
                   labelText: "E-posta",
-                  prefixIcon: Icon(
-                    Icons.email_outlined,
-                    color: subColor,
-                  ),
+                  prefixIcon: Icon(Icons.email, color: subColor),
                 ),
                 validator: (v) {
                   if (v == null || v.trim().isEmpty) {
@@ -408,7 +388,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
                 },
               ),
               const SizedBox(height: 14),
-
               TextFormField(
                 controller: _phoneController,
                 keyboardType: TextInputType.phone,
@@ -417,10 +396,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                 decoration: InputDecoration(
                   labelText: "Telefon",
                   hintText: "5xxxxxxxxx",
-                  prefixIcon: Icon(
-                    Icons.phone_outlined,
-                    color: subColor,
-                  ),
+                  prefixIcon: Icon(Icons.phone, color: subColor),
                 ),
                 validator: (v) {
                   if (v == null || v.trim().isEmpty) return null;
@@ -431,7 +407,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
                 },
               ),
               const SizedBox(height: 14),
-
               TextFormField(
                 controller: _birthDateController,
                 keyboardType: TextInputType.number,
@@ -443,10 +418,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                 decoration: InputDecoration(
                   labelText: "Doğum Tarihi",
                   hintText: "gg-aa-yyyy",
-                  prefixIcon: Icon(
-                    Icons.cake_outlined,
-                    color: subColor,
-                  ),
+                  prefixIcon: Icon(Icons.cake, color: subColor),
                 ),
                 validator: (v) {
                   if (v == null || v.trim().isEmpty) return null;
@@ -458,26 +430,12 @@ class _EditProfilePageState extends State<EditProfilePage> {
                   return null;
                 },
               ),
-
               const SizedBox(height: 32),
-
-              // KAYDET BUTONU (Siyah-Beyaz Yüksek Kontrast)
               SizedBox(
                 width: double.infinity,
                 height: 50,
                 child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: isDark
-                        ? const Color(0xFFF2F1F4)
-                        : const Color(0xFF19181B),
-                    foregroundColor: isDark
-                        ? const Color(0xFF121114)
-                        : Colors.white,
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                  ),
+                  style: AppTheme.standardButtonStyle(context),
                   onPressed: _isSaving
                       ? null
                       : () async {
@@ -499,21 +457,12 @@ class _EditProfilePageState extends State<EditProfilePage> {
                           height: 22,
                           child: CircularProgressIndicator(
                             strokeWidth: 2.2,
-                            color: isDark
-                                ? const Color(0xFF121114)
-                                : Colors.white,
+                            color: isDark ? const Color(0xFF121114) : Colors.white,
                           ),
                         )
-                      : const Text(
-                          "Bilgileri Kaydet",
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
+                      : const Text("Bilgileri Kaydet"),
                 ),
               ),
-
               const SizedBox(height: 40),
             ],
           ),

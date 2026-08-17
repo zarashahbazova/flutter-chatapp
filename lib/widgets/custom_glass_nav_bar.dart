@@ -100,7 +100,7 @@ class CustomGlassNavBar extends StatelessWidget {
                         bottom: 0,
                         child: Container(
                           decoration: BoxDecoration(
-                            color: const Color.fromARGB(255, 150, 149, 171).withAlpha(170),
+                            color: const Color.fromARGB(255, 158, 156, 201).withAlpha(170),
                             borderRadius: BorderRadius.circular(28),
                           ),
                         ),

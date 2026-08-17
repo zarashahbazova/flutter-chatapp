@@ -26,6 +26,7 @@ class _LoginPageState extends State<LoginPage> {
   bool _obscurePassword = true;
   bool _isLoggingIn = false;
   bool _rememberMe = false;
+
   Future<void> _loadSavedLogin() async {
     final prefs = await SharedPreferences.getInstance();
 
@@ -38,11 +39,9 @@ class _LoginPageState extends State<LoginPage> {
       if (savedUsername != null) {
         _usernameController.text = savedUsername;
       }
-
       if (savedPassword != null) {
         _passwordController.text = savedPassword;
       }
-
       _rememberMe = savedUsername != null && savedPassword != null;
     });
   }
@@ -73,29 +72,23 @@ class _LoginPageState extends State<LoginPage> {
     }
     return null;
   }
-Future<void> _login() async {
-  if (_isLoggingIn) return;
 
-  if (!_formKey.currentState!.validate()) return;
+  Future<void> _login() async {
+    if (_isLoggingIn) return;
+    if (!_formKey.currentState!.validate()) return;
 
-  setState(() {
-    _isLoggingIn = true;
-  });
+    setState(() => _isLoggingIn = true);
 
-  try {
+    try {
       final response = await api.login({
         "user_name": _usernameController.text.trim(),
         "password": _passwordController.text,
       });
 
-      print(response.statusCode);
-      print(response.body);
-
       final data = jsonDecode(response.body);
 
       if (response.statusCode == 200) {
         final prefs = await SharedPreferences.getInstance();
-
         final token = data["data"]?["token"];
         final user = data["data"]?["user"];
 
@@ -112,40 +105,29 @@ Future<void> _login() async {
         await prefs.setString("userName", user["user_name"]);
         await prefs.setString("fullName", user["full_name"]);
         await prefs.setString("email", user["email"]);
-        if (_rememberMe) {
-          await prefs.setString(
-            "savedUsername",
-            _usernameController.text.trim(),
-          );
 
+        if (_rememberMe) {
+          await prefs.setString("savedUsername", _usernameController.text.trim());
           await prefs.setString("savedPassword", _passwordController.text);
         } else {
           await prefs.remove("savedUsername");
           await prefs.remove("savedPassword");
         }
+
         try {
           String? fcmToken;
-
           if (Theme.of(context).platform == TargetPlatform.iOS) {
             final apnsToken = await FirebaseMessaging.instance.getAPNSToken();
-
-            print("LOGIN APNS TOKEN: $apnsToken");
-
             if (apnsToken != null) {
               fcmToken = await FirebaseMessaging.instance.getToken();
             }
           } else {
             fcmToken = await FirebaseMessaging.instance.getToken();
           }
-
-          print("LOGIN FCM TOKEN: $fcmToken");
-
           if (fcmToken != null) {
             await api.updateFcmToken(token: token, fcmToken: fcmToken);
           }
-        } catch (e) {
-          print("FCM token alınamadı: $e");
-        }
+        } catch (_) {}
 
         if (!mounted) return;
 
@@ -161,7 +143,6 @@ Future<void> _login() async {
         );
       } else {
         if (!mounted) return;
-
         AppTheme.showSnackBar(
           context,
           message: data["error"] ?? "Giriş başarısız.",
@@ -170,19 +151,19 @@ Future<void> _login() async {
       }
     } catch (e) {
       if (!mounted) return;
-
       AppTheme.showSnackBar(
         context,
         message: "Sunucuya bağlanılamadı.\n$e",
         isError: true,
       );
+    } finally {
+      if (mounted) setState(() => _isLoggingIn = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    // Üst alanın rengini değiştirmek isterseniz buraya istediğiniz rengi verebilirsiniz.
-    final Color topHeaderColor = Theme.of(context).colorScheme.primary;
+    final Color topHeaderColor = AppTheme.brandColor;
 
     return Scaffold(
       backgroundColor: topHeaderColor,
@@ -190,13 +171,12 @@ Future<void> _login() async {
         bottom: false,
         child: Column(
           children: [
-            // --- ÜST ALAN (Büyütülmüş Logo Alanı) ---
             Expanded(
-              flex: 3, // Üst alanın ekrandaki yüksekliğini artırdık
+              flex: 3,
               child: Center(
                 child: Container(
-                  height: 210, // Logonun yüksekliği büyütüldü (Eski değer: 110)
-                  width: 210, // Logonun genişliği büyütüldü (Eski değer: 110)
+                  height: 210,
+                  width: 210,
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(28),
                   ),
@@ -204,11 +184,11 @@ Future<void> _login() async {
                     borderRadius: BorderRadius.circular(28),
                     child: Image.asset(
                       'assets/images/logo.png',
-                      fit: BoxFit.contain, // Logoyu çerçeveye sığdırır
+                      fit: BoxFit.contain,
                       errorBuilder: (context, error, stackTrace) {
                         return const Icon(
                           Icons.chat_bubble_outline_rounded,
-                          size: 100, // Yüklenemeyen ikon da büyütüldü
+                          size: 150,
                           color: Colors.white,
                         );
                       },
@@ -217,8 +197,6 @@ Future<void> _login() async {
                 ),
               ),
             ),
-
-            // --- ALT ALAN (Kavisli Form Kartı) ---
             Expanded(
               flex: 6,
               child: Container(
@@ -241,8 +219,7 @@ Future<void> _login() async {
                       children: [
                         Text(
                           "Giriş Yapın",
-                          style: Theme.of(context).textTheme.headlineLarge
-                              ?.copyWith(
+                          style: Theme.of(context).textTheme.headlineLarge?.copyWith(
                                 fontSize: 30,
                                 fontWeight: FontWeight.bold,
                               ),
@@ -253,8 +230,6 @@ Future<void> _login() async {
                           style: Theme.of(context).textTheme.bodyMedium,
                         ),
                         const SizedBox(height: 28),
-
-                        // KULLANICI ADI
                         TextFormField(
                           controller: _usernameController,
                           validator: _validateUsername,
@@ -263,10 +238,7 @@ Future<void> _login() async {
                             prefixIcon: Icon(Icons.person),
                           ),
                         ),
-
                         const SizedBox(height: 16),
-
-                        // ŞİFRE
                         TextFormField(
                           controller: _passwordController,
                           obscureText: _obscurePassword,
@@ -288,13 +260,11 @@ Future<void> _login() async {
                             ),
                           ),
                         ),
-
                         const SizedBox(height: 8),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
-                            // BENİ HATIRLA
                             Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
@@ -309,7 +279,6 @@ Future<void> _login() async {
                                 const Text("Beni Hatırla"),
                               ],
                             ),
-
                             TextButton(
                               onPressed: () {
                                 Navigator.push(
@@ -323,18 +292,23 @@ Future<void> _login() async {
                             ),
                           ],
                         ),
-
                         const SizedBox(height: 16),
-
-                        // GİRİŞ BUTONU
+                        // Mor Renkli Login Butonu
                         ElevatedButton(
-                          onPressed: _login,
-                          child: const Text("Giriş Yap"),
+                          style: AppTheme.loginButtonStyle(context),
+                          onPressed: _isLoggingIn ? null : _login,
+                          child: _isLoggingIn
+                              ? const SizedBox(
+                                  width: 22,
+                                  height: 22,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2.2,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : const Text("Giriş Yap"),
                         ),
-
                         const SizedBox(height: 16),
-
-                        // REGISTER LİNKİ
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [

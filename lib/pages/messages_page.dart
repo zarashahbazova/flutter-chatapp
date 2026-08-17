@@ -60,8 +60,7 @@ class _MessagesPageState extends State<MessagesPage> {
     });
 
     _scrollController.addListener(() {
-      // 65 piksel aşağı kayınca AppBar belirginleşir
-      final show = _scrollController.offset > 65;
+      final show = _scrollController.offset > 20;
       if (show != _showSmallTitle) {
         setState(() => _showSmallTitle = show);
       }
@@ -87,6 +86,7 @@ class _MessagesPageState extends State<MessagesPage> {
     super.dispose();
   }
 
+  // 🔔 SABİT VE ŞIK ÜST BİLDİRİM KARTI
   void _showTopNotification({
     required String title,
     required String body,
@@ -96,7 +96,8 @@ class _MessagesPageState extends State<MessagesPage> {
 
     overlayEntry = OverlayEntry(
       builder: (context) {
-        final surfaceColor = Theme.of(context).colorScheme.surface;
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        final surfaceColor = AppTheme.getSurfaceColor(isDark);
         final onSurfaceColor = Theme.of(context).colorScheme.onSurface;
 
         return Positioned(
@@ -108,22 +109,22 @@ class _MessagesPageState extends State<MessagesPage> {
             child: ClipRRect(
               borderRadius: BorderRadius.circular(20),
               child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 2, sigmaY: 2),
+                filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
                 child: Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 16,
                     vertical: 12,
                   ),
                   decoration: BoxDecoration(
-                    color: surfaceColor.withAlpha(210),
+                    color: surfaceColor.withAlpha(isDark ? 220 : 240),
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
-                      color: AppTheme.primaryNavy.withAlpha(40),
-                      width: 1,
+                      color: AppTheme.getCardBorder(isDark),
+                      width: 1.1,
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withAlpha(30),
+                        color: Colors.black.withAlpha(isDark ? 60 : 15),
                         blurRadius: 16,
                         offset: const Offset(0, 6),
                       ),
@@ -134,13 +135,13 @@ class _MessagesPageState extends State<MessagesPage> {
                       Container(
                         width: 40,
                         height: 40,
-                        decoration: const BoxDecoration(
+                        decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: AppTheme.primaryNavy,
+                          color: AppTheme.getIconBg(isDark),
                         ),
-                        child: const Icon(
+                        child: Icon(
                           Icons.chat_bubble_outline_rounded,
-                          color: Colors.white,
+                          color: AppTheme.getIconFg(isDark),
                           size: 20,
                         ),
                       ),
@@ -165,7 +166,7 @@ class _MessagesPageState extends State<MessagesPage> {
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
                                 fontSize: 13,
-                                color: onSurfaceColor.withAlpha(160),
+                                color: AppTheme.getSectionHeaderColor(isDark),
                               ),
                             ),
                           ],
@@ -665,9 +666,9 @@ class _MessagesPageState extends State<MessagesPage> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final surfaceColor = theme.colorScheme.surface;
-    final onSurfaceColor = theme.colorScheme.onSurface;
     final isDark = theme.brightness == Brightness.dark;
+    final surfaceColor = AppTheme.getSurfaceColor(isDark);
+    final onSurfaceColor = theme.colorScheme.onSurface;
 
     final totalUnread = users.fold<int>(
       0,
@@ -676,7 +677,7 @@ class _MessagesPageState extends State<MessagesPage> {
 
     return Scaffold(
       extendBody: true,
-      extendBodyBehindAppBar: true, // AppBar altında liste akışının yumuşak görünmesi için
+      extendBodyBehindAppBar: true,
       appBar: _selectedIndex == 0
           ? PreferredSize(
               preferredSize: const Size.fromHeight(64),
@@ -689,8 +690,8 @@ class _MessagesPageState extends State<MessagesPage> {
                     duration: const Duration(milliseconds: 250),
                     decoration: BoxDecoration(
                       color: _showSmallTitle
-                          ? surfaceColor.withAlpha(190)
-                          : Colors.transparent, // Kaydırılmadığında tamamen şeffaf
+                          ? surfaceColor.withAlpha(isDark ? 200 : 220)
+                          : Colors.transparent,
                       border: Border(
                         bottom: BorderSide(
                           color: _showSmallTitle
@@ -702,7 +703,7 @@ class _MessagesPageState extends State<MessagesPage> {
                       boxShadow: _showSmallTitle
                           ? [
                               BoxShadow(
-                                color: Colors.black.withAlpha(8),
+                                color: Colors.black.withAlpha(isDark ? 40 : 8),
                                 blurRadius: 12,
                                 offset: const Offset(0, 4),
                               ),
@@ -727,16 +728,10 @@ class _MessagesPageState extends State<MessagesPage> {
                                     vertical: 5,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: theme.colorScheme.primary,
+                                    color: isDark
+                                        ? const Color(0xFF2C2A31)
+                                        : const Color.fromARGB(255, 66, 64, 69),
                                     borderRadius: BorderRadius.circular(16),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: theme.colorScheme.primary
-                                            .withAlpha(80),
-                                        blurRadius: 8,
-                                        offset: const Offset(0, 2),
-                                      ),
-                                    ],
                                   ),
                                   child: Text(
                                     totalUnread > 99
@@ -752,52 +747,39 @@ class _MessagesPageState extends State<MessagesPage> {
                               ),
                             )
                           : null,
-                      title: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children:[ 
-                         
-                            
-                          
-                          Text(
-                            "Sohbetler",
-                            style: TextStyle(
-                              fontSize: 21,
-                              fontWeight: FontWeight.w800,
-                              color: onSurfaceColor,
-                              letterSpacing: -0.3,
-                            ),
-                          ),
-                        ],
+                      title: Text(
+                        "Sohbetler",
+                        style: TextStyle(
+                          fontSize: 21,
+                          fontWeight: FontWeight.w800,
+                          color: onSurfaceColor,
+                          letterSpacing: -0.3,
+                        ),
                       ),
                       actions: [
                         Padding(
                           padding: const EdgeInsets.only(right: 12),
                           child: Center(
                             child: Material(
-                              color: const Color.fromARGB(23, 0, 0, 0),
+                              color: Colors.transparent,
                               shape: const CircleBorder(),
                               clipBehavior: Clip.antiAlias,
                               child: InkWell(
                                 onTap: _openNewChatOptions,
-                                splashColor: theme.colorScheme.primary
-                                    .withAlpha(30),
                                 child: Container(
-                                  width: 42,
-                                  height: 42,
+                                  width: 40,
+                                  height: 40,
                                   decoration: BoxDecoration(
-                                    color: theme.colorScheme.primary.withAlpha(
-                                      12,
-                                    ),
+                                    color: AppTheme.getIconBg(isDark),
                                     shape: BoxShape.circle,
                                     border: Border.all(
-                                      color: theme.colorScheme.primary
-                                          .withAlpha(15),
-                                      width: 1.2,
+                                      color: onSurfaceColor.withAlpha(isDark ? 16 : 10),
+                                      width: 1.1,
                                     ),
                                   ),
                                   child: Icon(
-                                    Icons.add,
-                                    color: AppTheme.darkBackgroundColor,
+                                    Icons.add_rounded,
+                                    color: AppTheme.getIconFg(isDark),
                                     size: 20,
                                   ),
                                 ),
@@ -813,20 +795,21 @@ class _MessagesPageState extends State<MessagesPage> {
             )
           : null,
       body: Container(
-        // 🔄 Renk sırası tam tersi yapıldı (Yukarıdan aşağıya ters gradyan)
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: isDark
                 ? [
-                    const Color.fromARGB(255, 54, 53, 59),
-                    const Color.fromARGB(255, 118, 114, 125),
+                    const Color(0xFF1A1822),
+                    const Color(0xFF111014),
+                    const Color(0xFF0B0A0D),
                   ]
                 : [
-                    const Color.fromARGB(255, 222, 224, 246),
+                    const Color(0xFFEDEBF4),
                     AppTheme.backgroundColor,
                   ],
+            stops: isDark ? const [0.0, 0.45, 1.0] : const [0.0, 1.0],
           ),
         ),
         child: Stack(
@@ -883,27 +866,18 @@ class _MessagesPageState extends State<MessagesPage> {
       return matchesSearch && matchesFilter;
     }).toList();
 
-    final primaryColor = Theme.of(context).colorScheme.primary;
-    final surfaceColor = Theme.of(context).colorScheme.surface;
-    final onSurfaceColor = Theme.of(context).colorScheme.onSurface;
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final surfaceColor = AppTheme.getSurfaceColor(isDark);
+    final onSurfaceColor = theme.colorScheme.onSurface;
 
-    // 🔄 Aşağı çekince yenileme (Pull to Refresh) eklendi
-    return RefreshIndicator(
-      color: primaryColor,
-      backgroundColor: surfaceColor,
-      onRefresh: () async {
-        await loadRooms(showLoading: false);
-      },
-      child: ListView(
-        controller: _scrollController,
-        physics: const AlwaysScrollableScrollPhysics(
-          parent: BouncingScrollPhysics(),
-        ),
-        padding: EdgeInsets.only(
-          top: MediaQuery.of(context).padding.top + 68,
-          bottom: MediaQuery.of(context).padding.bottom + 100,
-        ),
+    return Padding(
+      padding: EdgeInsets.only(
+        top: MediaQuery.of(context).padding.top + 68,
+      ),
+      child: Column(
         children: [
+          // 🔍 ARAMA KUTUSU (ÜSTTE SABİT)
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 18),
             child: ClipRRect(
@@ -915,24 +889,20 @@ class _MessagesPageState extends State<MessagesPage> {
                   curve: Curves.easeOut,
                   height: 48,
                   decoration: BoxDecoration(
-                    color: surfaceColor.withAlpha(
-                      Theme.of(context).brightness == Brightness.dark ? 140 : 190,
-                    ),
+                    color: surfaceColor.withAlpha(isDark ? 160 : 200),
                     borderRadius: BorderRadius.circular(24),
                     border: Border.all(
                       color: _searchFocusNode.hasFocus
-                          ? primaryColor.withAlpha(120)
-                          : onSurfaceColor.withAlpha(18),
+                          ? (isDark ? Colors.white38 : Colors.black45)
+                          : onSurfaceColor.withAlpha(16),
                       width: _searchFocusNode.hasFocus ? 1.4 : 1.1,
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: primaryColor.withAlpha(
-                          _searchFocusNode.hasFocus ? 40 : 18,
-                        ),
-                        blurRadius: _searchFocusNode.hasFocus ? 22 : 18,
-                        spreadRadius: -3,
-                        offset: const Offset(0, 6),
+                        color: Colors.black.withAlpha(isDark ? 40 : 8),
+                        blurRadius: _searchFocusNode.hasFocus ? 16 : 10,
+                        spreadRadius: -2,
+                        offset: const Offset(0, 4),
                       ),
                     ],
                   ),
@@ -959,7 +929,7 @@ class _MessagesPageState extends State<MessagesPage> {
                           Icons.search_rounded,
                           size: 21,
                           color: _searchFocusNode.hasFocus
-                              ? primaryColor
+                              ? onSurfaceColor
                               : onSurfaceColor.withAlpha(140),
                         ),
                       ),
@@ -991,148 +961,162 @@ class _MessagesPageState extends State<MessagesPage> {
             ),
           ),
           const SizedBox(height: 14),
+
+          // 🏷️ FİLTRE BUTONLARI (ÜSTTE SABİT)
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             physics: const BouncingScrollPhysics(),
             padding: const EdgeInsets.symmetric(horizontal: 18),
             child: Row(
-              children:
-                  <MapEntry<String, IconData>>[
-                    const MapEntry("Tümü", Icons.forum_rounded),
-                    const MapEntry("Okunmamış", Icons.mark_chat_unread_rounded),
-                    const MapEntry("Gruplar", Icons.groups_rounded),
-                  ].map((entry) {
-                    final filter = entry.key;
-                    final icon = entry.value;
-                    final bool isSelected = _selectedFilter == filter;
-                    return Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: GestureDetector(
-                        onTap: () => setState(() => _selectedFilter = filter),
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 200),
-                          curve: Curves.easeOut,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 14,
-                            vertical: 8,
-                          ),
-                          decoration: BoxDecoration(
-                            // gradient: isSelected
-                            //     ? LinearGradient(
-                            //         colors: [
-                            //           primaryColor,
-                            //           AppTheme.primaryNavy,
-                            //         ],
-                            //         begin: Alignment.topLeft,
-                            //         end: Alignment.bottomRight,
-                            //       )
-                            //     : null,
-                            
-                            color: isSelected
-                                ? const Color.fromARGB(215, 0, 0, 0)
-                                : surfaceColor.withAlpha(170),
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(
-                              color: isSelected
-                                  ? Colors.transparent
-                                  : onSurfaceColor.withAlpha(22),
-                              width: 1,
-                            ),
-                            boxShadow: isSelected
-                                ? [
-                                    BoxShadow(
-                                      color: primaryColor.withAlpha(60),
-                                      blurRadius: 10,
-                                      offset: const Offset(0, 3),
-                                    ),
-                                  ]
-                                : [],
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                icon,
-                                size: 15,
-                                color: isSelected
-                                    ? Colors.white
-                                    : onSurfaceColor.withAlpha(150),
-                              ),
-                              const SizedBox(width: 6),
-                              Text(
-                                filter,
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: isSelected
-                                      ? FontWeight.w700
-                                      : FontWeight.w500,
-                                  color: isSelected
-                                      ? Colors.white
-                                      : onSurfaceColor.withAlpha(180),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
+              children: <MapEntry<String, IconData>>[
+                const MapEntry("Tümü", Icons.forum_rounded),
+                const MapEntry("Okunmamış", Icons.mark_chat_unread_rounded),
+                const MapEntry("Gruplar", Icons.groups_rounded),
+              ].map((entry) {
+                final filter = entry.key;
+                final icon = entry.value;
+                final bool isSelected = _selectedFilter == filter;
+                return Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: GestureDetector(
+                    onTap: () => setState(() => _selectedFilter = filter),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      curve: Curves.easeOut,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 8,
                       ),
-                    );
-                  }).toList(),
+                      decoration: BoxDecoration(
+                        color: isSelected
+                            ? (isDark ? const Color(0xFF2C2A31) : const Color(0xFF19181B))
+                            : surfaceColor.withAlpha(isDark ? 160 : 190),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: isSelected
+                              ? Colors.transparent
+                              : onSurfaceColor.withAlpha(18),
+                          width: 1,
+                        ),
+                        boxShadow: isSelected
+                            ? [
+                                BoxShadow(
+                                  color: Colors.black.withAlpha(isDark ? 50 : 15),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 3),
+                                ),
+                              ]
+                            : [],
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            icon,
+                            size: 15,
+                            color: isSelected
+                                ? Colors.white
+                                : onSurfaceColor.withAlpha(150),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            filter,
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: isSelected
+                                  ? FontWeight.w700
+                                  : FontWeight.w500,
+                              color: isSelected
+                                  ? Colors.white
+                                  : onSurfaceColor.withAlpha(180),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              }).toList(),
             ),
           ),
-          const SizedBox(height: 10),
-          if (filteredUsers.isEmpty)
-            Padding(
-              padding: const EdgeInsets.only(top: 56),
-              child: Center(
-                child: Column(
-                  children: [
-                    Container(
-                      width: 84,
-                      height: 84,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: primaryColor.withAlpha(16),
-                        border: Border.all(
-                          color: primaryColor.withAlpha(30),
-                          width: 1.2,
+          const SizedBox(height: 6),
+
+          // 🔄 SADECE MESAJ TİLE'LARINI KAPSAYAN REFRESH INDICATOR
+          Expanded(
+            child: RefreshIndicator(
+              color: isDark ? Colors.white70 : const Color(0xFF19181B),
+              backgroundColor: surfaceColor,
+              displacement: 20, // Filtrelerin hemen altında şık bir mesafede açılır
+              onRefresh: () async {
+                await loadRooms(showLoading: false);
+              },
+              child: ListView(
+                controller: _scrollController,
+                physics: const AlwaysScrollableScrollPhysics(
+                  parent: BouncingScrollPhysics(),
+                ),
+                padding: EdgeInsets.only(
+                  top: 4,
+                  bottom: MediaQuery.of(context).padding.bottom + 100,
+                ),
+                children: [
+                  if (filteredUsers.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 56),
+                      child: Center(
+                        child: Column(
+                          children: [
+                            Container(
+                              width: 84,
+                              height: 84,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: AppTheme.getIconBg(isDark),
+                                border: Border.all(
+                                  color: onSurfaceColor.withAlpha(16),
+                                  width: 1.2,
+                                ),
+                              ),
+                              child: Icon(
+                                Icons.search_off_rounded,
+                                size: 34,
+                                color: onSurfaceColor.withAlpha(110),
+                              ),
+                            ),
+                            const SizedBox(height: 14),
+                            Text(
+                              "Sonuç bulunamadı",
+                              style: TextStyle(
+                                fontSize: 15,
+                                color: onSurfaceColor.withAlpha(150),
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              "Farklı bir arama veya filtre deneyin",
+                              style: TextStyle(
+                                fontSize: 12.5,
+                                color: onSurfaceColor.withAlpha(100),
+                                fontWeight: FontWeight.w400,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                      child: Icon(
-                        Icons.search_off_rounded,
-                        size: 34,
-                        color: onSurfaceColor.withAlpha(110),
+                    )
+                  else
+                    ...filteredUsers.map(
+                      (user) => MessageTile(
+                        user: user,
+                        onTap: () => _handleTileTap(user),
+                        onLongPress: () => _showChatOptionsMenu(user),
                       ),
                     ),
-                    const SizedBox(height: 14),
-                    Text(
-                      "Sonuç bulunamadı",
-                      style: TextStyle(
-                        fontSize: 15,
-                        color: onSurfaceColor.withAlpha(150),
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      "Farklı bir arama veya filtre deneyin",
-                      style: TextStyle(
-                        fontSize: 12.5,
-                        color: onSurfaceColor.withAlpha(100),
-                        fontWeight: FontWeight.w400,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            )
-          else
-            ...filteredUsers.map(
-              (user) => MessageTile(
-                user: user,
-                onTap: () => _handleTileTap(user),
-                onLongPress: () => _showChatOptionsMenu(user),
+                ],
               ),
             ),
+          ),
         ],
       ),
     );

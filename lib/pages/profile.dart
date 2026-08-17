@@ -126,6 +126,8 @@ class _ProfilePageState extends State<ProfilePage> {
     if (status.isGranted || status.isLimited) {
       final XFile? image = await _picker.pickImage(
         source: source,
+        maxWidth: 1600,
+        maxHeight: 1600,
         imageQuality: 80,
       );
 
@@ -340,13 +342,18 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   void _confirmDeleteAccount() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final surfaceColor = AppTheme.getSurfaceColor(isDark);
     final onSurfaceColor = Theme.of(context).colorScheme.onSurface;
+
     showDialog(
       context: context,
       builder: (context) {
         return AlertDialog(
+          backgroundColor: surfaceColor,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
+            side: BorderSide(color: AppTheme.getCardBorder(isDark), width: 1.1),
           ),
           title: Text(
             "Hesabınızı Silmek İstiyor musunuz?",
@@ -406,7 +413,7 @@ class _ProfilePageState extends State<ProfilePage> {
             fontSize: 11,
             fontWeight: FontWeight.w700,
             letterSpacing: 0.8,
-            color: isDark ? const Color(0xFF8E8B94) : const Color(0xFF827E8C),
+            color: AppTheme.getSectionHeaderColor(isDark),
           ),
         ),
       ),
@@ -420,7 +427,7 @@ class _ProfilePageState extends State<ProfilePage> {
     required bool isDark,
   }) {
     final onSurfaceColor = Theme.of(context).colorScheme.onSurface;
-    final subColor = isDark ? const Color(0xFF8E8B94) : const Color(0xFF827E8C);
+    final subColor = AppTheme.getSectionHeaderColor(isDark);
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
@@ -430,16 +437,10 @@ class _ProfilePageState extends State<ProfilePage> {
             width: 38,
             height: 38,
             decoration: BoxDecoration(
-              color: isDark
-                  ? const Color.fromARGB(255, 87, 84, 92)
-                  : const Color(0xFFF3F2F5),
+              color: AppTheme.getIconBg(isDark),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(
-              icon,
-              size: 19,
-              color: isDark ? Colors.white70 : const Color(0xFF2C2A31),
-            ),
+            child: Icon(icon, size: 19, color: AppTheme.getIconFg(isDark)),
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -476,9 +477,6 @@ class _ProfilePageState extends State<ProfilePage> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final surfaceColor = isDark
-        ? AppTheme.darkSurfaceColor
-        : AppTheme.surfaceColor;
     final onSurfaceColor = theme.colorScheme.onSurface;
 
     final String firstLetter = _currentName.isNotEmpty
@@ -491,7 +489,8 @@ class _ProfilePageState extends State<ProfilePage> {
         : null;
 
     return Scaffold(
-      backgroundColor: theme.scaffoldBackgroundColor,
+      extendBodyBehindAppBar: true,
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
         title: const Text(
           "Profil",
@@ -503,376 +502,373 @@ class _ProfilePageState extends State<ProfilePage> {
         ),
         centerTitle: true,
         elevation: 0,
+        backgroundColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
       ),
-      body: SingleChildScrollView(
-        physics: const BouncingScrollPhysics(),
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-        child: Column(
-          children: [
-            const SizedBox(height: 8),
-
-            // 📸 SADE VE ŞIK PROFİL FOTOĞRAFI (Fotoğraf üstünde buton yok)
-            Center(
-              child: Container(
-                width: 110,
-                height: 110,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: isDark ? const Color(0xFF1D1C21) : Colors.white,
-                  border: Border.all(
-                    color: isDark
-                        ? const Color(0xFF2C2A31)
-                        : const Color(0xFFE2E0E7),
-                    width: 2,
+      body: Container(
+        // 🌌 MessagesPage ile birebir aynı gradyanlı arka plan
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: isDark
+                ? [
+                    const Color(
+                      0xFF1A1822,
+                    ), // Çok hafif, zarif üst morumsu antrasit
+                    const Color(0xFF111014), // Orta geçiş
+                    const Color(0xFF0B0A0D), // Aşağısı saf siyah
+                  ]
+                : [
+                    const Color(0xFFEDEBF4), // Açık tema yumuşak üst ton
+                    AppTheme.backgroundColor, // Açık tema zemin rengi
+                  ],
+            stops: isDark ? const [0.0, 0.45, 1.0] : const [0.0, 1.0],
+          ),
+        ),
+        child: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          padding: EdgeInsets.only(
+            left: 20,
+            right: 20,
+            top: MediaQuery.of(context).padding.top + kToolbarHeight + 12,
+            bottom: 8,
+          ),
+          child: Column(
+            children: [
+              // 📸 PROFİL FOTOĞRAFI
+              Center(
+                child: Container(
+                  width: 110,
+                  height: 110,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: isDark ? const Color(0xFF1D1C21) : Colors.white,
+                    border: Border.all(
+                      color: AppTheme.getAvatarBorder(isDark),
+                      width: 2,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withAlpha(isDark ? 80 : 10),
+                        blurRadius: 16,
+                        offset: const Offset(0, 6),
+                      ),
+                    ],
                   ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withAlpha(isDark ? 80 : 10),
-                      blurRadius: 16,
-                      offset: const Offset(0, 6),
+                  alignment: Alignment.center,
+                  child: _isUploadingPhoto
+                      ? const CircularProgressIndicator(
+                          strokeWidth: 2.5,
+                          color: Colors.black54,
+                        )
+                      : fullPhotoUrl != null
+                      ? ClipOval(
+                          child: Image.network(
+                            fullPhotoUrl,
+                            width: 110,
+                            height: 110,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => Text(
+                              firstLetter,
+                              style: TextStyle(
+                                fontSize: 36,
+                                fontWeight: FontWeight.bold,
+                                color: onSurfaceColor,
+                              ),
+                            ),
+                          ),
+                        )
+                      : Text(
+                          firstLetter,
+                          style: TextStyle(
+                            fontSize: 36,
+                            fontWeight: FontWeight.bold,
+                            color: onSurfaceColor,
+                          ),
+                        ),
+                ),
+              ),
+
+              const SizedBox(height: 14),
+
+              // İSİM
+              Text(
+                _currentName.isNotEmpty ? _currentName : "Kullanıcı",
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 21,
+                  fontWeight: FontWeight.w600,
+                  color: onSurfaceColor,
+                  letterSpacing: -0.4,
+                ),
+              ),
+
+              const SizedBox(height: 24),
+
+              // 1. BÖLÜM: BİLGİ KARTI & PROFİLİ DÜZENLE
+              _buildSectionHeader("Kullanıcı Bilgileri", isDark),
+              Container(
+                decoration: AppTheme.profileCardDecoration(isDark),
+                child: Column(
+                  children: [
+                    _buildInfoRow(
+                      icon: Icons.alternate_email_rounded,
+                      label: "Kullanıcı Adı",
+                      value: _currentUsername.isNotEmpty
+                          ? "@$_currentUsername"
+                          : "",
+                      isDark: isDark,
+                    ),
+                    Divider(
+                      height: 1,
+                      thickness: 0.7,
+                      indent: 16,
+                      endIndent: 16,
+                      color: onSurfaceColor.withAlpha(isDark ? 16 : 10),
+                    ),
+                    _buildInfoRow(
+                      icon: Icons.phone,
+                      label: "Telefon Numarası",
+                      value: _currentPhone,
+                      isDark: isDark,
+                    ),
+                    Divider(
+                      height: 1,
+                      thickness: 0.7,
+                      indent: 16,
+                      endIndent: 16,
+                      color: onSurfaceColor.withAlpha(isDark ? 16 : 10),
+                    ),
+                    _buildInfoRow(
+                      icon: Icons.email,
+                      label: "E-Posta Adresi",
+                      value: _currentEmail,
+                      isDark: isDark,
+                    ),
+                    Divider(
+                      height: 1,
+                      thickness: 0.7,
+                      indent: 16,
+                      endIndent: 16,
+                      color: onSurfaceColor.withAlpha(isDark ? 16 : 10),
+                    ),
+                    _buildInfoRow(
+                      icon: Icons.cake,
+                      label: "Doğum Tarihi",
+                      value: _currentBirthDate,
+                      isDark: isDark,
+                    ),
+
+                    const SizedBox(height: 8),
+
+                    // PROFİLİ DÜZENLE
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
+                      child: SizedBox(
+                        width: double.infinity,
+                        height: 44,
+                        child: TextButton.icon(
+                          icon: Icon(
+                            Icons.edit_note_rounded,
+                            size: 20,
+                            color: isDark
+                                ? Colors.white70
+                                : const Color(0xFF19181B),
+                          ),
+                          label: Text(
+                            "Profili Düzenle",
+                            style: TextStyle(
+                              fontSize: 14.5,
+                              fontWeight: FontWeight.w700,
+                              color: isDark
+                                  ? Colors.white
+                                  : const Color(0xFF19181B),
+                            ),
+                          ),
+                          style: TextButton.styleFrom(
+                            backgroundColor: isDark
+                                ? Colors.white.withAlpha(8)
+                                : Colors.black.withAlpha(5),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          onPressed: _navigateToEditProfile,
+                        ),
+                      ),
                     ),
                   ],
                 ),
-                alignment: Alignment.center,
-                child: _isUploadingPhoto
-                    ? const CircularProgressIndicator(
-                        strokeWidth: 2.5,
-                        color: Colors.black54,
-                      )
-                    : fullPhotoUrl != null
-                    ? ClipOval(
-                        child: Image.network(
-                          fullPhotoUrl,
-                          width: 110,
-                          height: 110,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => Text(
-                            firstLetter,
-                            style: TextStyle(
-                              fontSize: 36,
-                              fontWeight: FontWeight.bold,
-                              color: onSurfaceColor,
-                            ),
-                          ),
+              ),
+
+              const SizedBox(height: 20),
+
+              // 2. BÖLÜM: TEMA VE TERCİHLER KARTI
+              _buildSectionHeader("Tercihler", isDark),
+              Container(
+                decoration: AppTheme.profileCardDecoration(isDark),
+                child: ListTile(
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 4,
+                  ),
+                  leading: Container(
+                    width: 38,
+                    height: 38,
+                    decoration: BoxDecoration(
+                      color: AppTheme.getIconBg(isDark),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(
+                      _isDarkMode
+                          ? Icons.dark_mode_rounded
+                          : Icons.light_mode_rounded,
+                      size: 19,
+                      color: AppTheme.getIconFg(isDark),
+                    ),
+                  ),
+                  title: Text(
+                    "Koyu Tema",
+                    style: TextStyle(
+                      fontSize: 14.5,
+                      fontWeight: FontWeight.w600,
+                      color: onSurfaceColor,
+                    ),
+                  ),
+                  trailing: Switch(
+                    value: _isDarkMode,
+                    thumbColor: WidgetStateProperty.resolveWith<Color>((
+                      states,
+                    ) {
+                      if (states.contains(WidgetState.selected)) {
+                        return Colors.white;
+                      }
+                      return isDark ? Colors.white70 : Colors.black45;
+                    }),
+                    trackColor: WidgetStateProperty.resolveWith<Color>((
+                      states,
+                    ) {
+                      if (states.contains(WidgetState.selected)) {
+                        return isDark
+                            ? Colors.white.withAlpha(40)
+                            : const Color(0xFF19181B).withAlpha(180);
+                      }
+                      return isDark
+                          ? Colors.white.withAlpha(15)
+                          : Colors.black.withAlpha(15);
+                    }),
+                    trackOutlineColor: WidgetStateProperty.resolveWith<Color>((
+                      states,
+                    ) {
+                      return isDark
+                          ? Colors.white.withAlpha(25)
+                          : Colors.black.withAlpha(20);
+                    }),
+                    trackOutlineWidth: WidgetStateProperty.all(1.0),
+                    onChanged: (value) async {
+                      setState(() => _isDarkMode = value);
+                      themeNotifier.value = value
+                          ? ThemeMode.dark
+                          : ThemeMode.light;
+
+                      final prefs = await SharedPreferences.getInstance();
+                      await prefs.setBool("isDarkMode", value);
+                    },
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 20),
+
+              // 3. BÖLÜM: HESAP İŞLEMLERİ
+              _buildSectionHeader("Hesap", isDark),
+              Container(
+                decoration: AppTheme.profileCardDecoration(isDark),
+                child: Column(
+                  children: [
+                    ListTile(
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 2,
+                      ),
+                      leading: Container(
+                        width: 38,
+                        height: 38,
+                        decoration: BoxDecoration(
+                          color: AppTheme.getIconBg(isDark),
+                          borderRadius: BorderRadius.circular(10),
                         ),
-                      )
-                    : Text(
-                        firstLetter,
+                        child: Icon(
+                          Icons.logout_rounded,
+                          size: 19,
+                          color: AppTheme.getIconFg(isDark),
+                        ),
+                      ),
+                      title: Text(
+                        "Çıkış Yap",
                         style: TextStyle(
-                          fontSize: 36,
-                          fontWeight: FontWeight.bold,
+                          fontSize: 14.5,
+                          fontWeight: FontWeight.w600,
                           color: onSurfaceColor,
                         ),
                       ),
-              ),
-            ),
-
-            const SizedBox(height: 14),
-
-            // İSİM
-            Text(
-              _currentName.isNotEmpty ? _currentName : "Kullanıcı",
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 21,
-                fontWeight: FontWeight.w800,
-                color: onSurfaceColor,
-                letterSpacing: -0.4,
-              ),
-            ),
-
-            const SizedBox(height: 24),
-
-            // 1. BÖLÜM: BİLGİ KARTI & PROFİLİ DÜZENLE
-            // profile.dart -> 1. BÖLÜM: BİLGİ KARTI & PROFİLİ DÜZENLE
-            _buildSectionHeader("Kullanıcı Bilgileri", isDark),
-            Container(
-              decoration: BoxDecoration(
-                color: surfaceColor,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: isDark
-                      ? const Color.fromARGB(255, 0, 0, 0)
-                      : const Color.fromARGB(255, 255, 255, 255),
-                  width: 1.1,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withAlpha(isDark ? 50 : 6),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Column(
-                children: [
-                  _buildInfoRow(
-                    icon: Icons.alternate_email_rounded,
-                    label: "Kullanıcı Adı",
-                    value: _currentUsername.isNotEmpty
-                        ? "@$_currentUsername"
-                        : "",
-                    isDark: isDark,
-                  ),
-                  Divider(
-                    height: 1,
-                    thickness: 0.7,
-                    indent: 16,
-                    endIndent: 16,
-                    color: onSurfaceColor.withAlpha(isDark ? 16 : 10),
-                  ),
-                  _buildInfoRow(
-                    icon: Icons.phone_outlined,
-                    label: "Telefon Numarası",
-                    value: _currentPhone,
-                    isDark: isDark,
-                  ),
-                  Divider(
-                    height: 1,
-                    thickness: 0.7,
-                    indent: 16,
-                    endIndent: 16,
-                    color: onSurfaceColor.withAlpha(isDark ? 16 : 10),
-                  ),
-                  _buildInfoRow(
-                    icon: Icons.mail_outline_rounded,
-                    label: "E-Posta Adresi",
-                    value: _currentEmail,
-                    isDark: isDark,
-                  ),
-                  Divider(
-                    height: 1,
-                    thickness: 0.7,
-                    indent: 16,
-                    endIndent: 16,
-                    color: onSurfaceColor.withAlpha(isDark ? 16 : 10),
-                  ),
-                  // 🎂 DOĞUM TARİHİ ALANI
-                  _buildInfoRow(
-                    icon: Icons.cake_outlined,
-                    label: "Doğum Tarihi",
-                    value: _currentBirthDate,
-                    isDark: isDark,
-                  ),
-
-                  const SizedBox(height: 8),
-
-                  // PROFİLİ DÜZENLE (TextButton)
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
-                    child: SizedBox(
-                      width: double.infinity,
-                      height: 44,
-                      child: TextButton.icon(
-                        icon: Icon(
-                          Icons.edit_note_rounded,
-                          size: 20,
-                          color: isDark
-                              ? Colors.white70
-                              : const Color(0xFF19181B),
-                        ),
-                        label: Text(
-                          "Profili Düzenle",
-                          style: TextStyle(
-                            fontSize: 14.5,
-                            fontWeight: FontWeight.w700,
-                            color: isDark
-                                ? Colors.white
-                                : const Color(0xFF19181B),
+                      trailing: Icon(
+                        Icons.chevron_right_rounded,
+                        size: 20,
+                        color: onSurfaceColor.withAlpha(100),
+                      ),
+                      onTap: _logout,
+                    ),
+                    Divider(
+                      height: 1,
+                      thickness: 0.7,
+                      indent: 16,
+                      endIndent: 16,
+                      color: onSurfaceColor.withAlpha(isDark ? 16 : 10),
+                    ),
+                    ListTile(
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 2,
+                      ),
+                      leading: Container(
+                        width: 38,
+                        height: 38,
+                        decoration: BoxDecoration(
+                          color: AppTheme.errorColor.withAlpha(
+                            isDark ? 25 : 15,
                           ),
+                          borderRadius: BorderRadius.circular(10),
                         ),
-                        style: TextButton.styleFrom(
-                          backgroundColor: isDark
-                              ? Colors.white.withAlpha(8)
-                              : Colors.black.withAlpha(5),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
+                        child: const Icon(
+                          Icons.delete_outline_rounded,
+                          size: 19,
+                          color: AppTheme.errorColor,
                         ),
-                        onPressed: _navigateToEditProfile,
                       ),
+                      title: Text(
+                        "Hesabı Sil",
+                        style: TextStyle(
+                          fontSize: 14.5,
+                          fontWeight: FontWeight.w600,
+                          color: onSurfaceColor,
+                        ),
+                      ),
+                      trailing: Icon(
+                        Icons.chevron_right_rounded,
+                        size: 20,
+                        color: onSurfaceColor.withAlpha(100),
+                      ),
+                      onTap: _confirmDeleteAccount,
                     ),
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 20),
-
-            // 2. BÖLÜM: TEMA VE TERCİHLER KARTI (Ayarlar içeriği)
-            _buildSectionHeader("Tercihler", isDark),
-            Container(
-              decoration: BoxDecoration(
-                color: surfaceColor,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: isDark
-                      ? const Color.fromARGB(255, 0, 0, 0)
-                      : const Color.fromARGB(255, 255, 255, 255),
-                  width: 1.1,
+                  ],
                 ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withAlpha(isDark ? 50 : 6),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
               ),
-              child: SwitchListTile(
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 4,
-                ),
-                value: _isDarkMode,
-                activeThumbColor: isDark ? Colors.white : Colors.black,
-                activeTrackColor: isDark
-                    ? const Color(0xFF3F3D45)
-                    : const Color(0xFFCCCCCC),
-                secondary: Container(
-                  width: 38,
-                  height: 38,
-                  decoration: BoxDecoration(
-                    color: isDark
-                        ? const Color(0xFF141316)
-                        : const Color(0xFFF3F2F5),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Icon(
-                    _isDarkMode
-                        ? Icons.dark_mode_rounded
-                        : Icons.light_mode_rounded,
-                    size: 19,
-                    color: isDark ? Colors.white70 : const Color(0xFF2C2A31),
-                  ),
-                ),
-                title: Text(
-                  "Koyu Tema",
-                  style: TextStyle(
-                    fontSize: 14.5,
-                    fontWeight: FontWeight.w600,
-                    color: onSurfaceColor,
-                  ),
-                ),
-                onChanged: (value) async {
-                  setState(() => _isDarkMode = value);
-                  themeNotifier.value = value
-                      ? ThemeMode.dark
-                      : ThemeMode.light;
 
-                  final prefs = await SharedPreferences.getInstance();
-                  await prefs.setBool("isDarkMode", value);
-                },
-              ),
-            ),
-
-            const SizedBox(height: 20),
-
-            // 3. BÖLÜM: HESAP İŞLEMLERİ (Çıkış & Silme Kartı)
-            _buildSectionHeader("Hesap", isDark),
-            Container(
-              decoration: BoxDecoration(
-                color: surfaceColor,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: isDark
-                      ? const Color.fromARGB(255, 0, 0, 0)
-                      : const Color.fromARGB(255, 255, 255, 255),
-                  width: 1.1,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withAlpha(isDark ? 50 : 6),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Column(
-                children: [
-                  ListTile(
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 2,
-                    ),
-                    leading: Container(
-                      width: 38,
-                      height: 38,
-                      decoration: BoxDecoration(
-                        color: isDark
-                            ? const Color(0xFF141316)
-                            : const Color(0xFFF3F2F5),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Icon(
-                        Icons.logout_rounded,
-                        size: 19,
-                        color: isDark
-                            ? Colors.white70
-                            : const Color(0xFF2C2A31),
-                      ),
-                    ),
-                    title: Text(
-                      "Çıkış Yap",
-                      style: TextStyle(
-                        fontSize: 14.5,
-                        fontWeight: FontWeight.w600,
-                        color: onSurfaceColor,
-                      ),
-                    ),
-                    trailing: Icon(
-                      Icons.chevron_right_rounded,
-                      size: 20,
-                      color: onSurfaceColor.withAlpha(100),
-                    ),
-                    onTap: _logout,
-                  ),
-                  Divider(
-                    height: 1,
-                    thickness: 0.7,
-                    indent: 16,
-                    endIndent: 16,
-                    color: onSurfaceColor.withAlpha(isDark ? 16 : 10),
-                  ),
-                  ListTile(
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 2,
-                    ),
-                    leading: Container(
-                      width: 38,
-                      height: 38,
-                      decoration: BoxDecoration(
-                        color: AppTheme.errorColor.withAlpha(isDark ? 25 : 15),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: const Icon(
-                        Icons.delete_outline_rounded,
-                        size: 19,
-                        color: AppTheme.errorColor,
-                      ),
-                    ),
-                    title: const Text(
-                      "Hesabı Sil",
-                      style: TextStyle(
-                        fontSize: 14.5,
-                        fontWeight: FontWeight.w600,
-                        color: AppTheme.errorColor,
-                      ),
-                    ),
-                    trailing: Icon(
-                      Icons.chevron_right_rounded,
-                      size: 20,
-                      color: AppTheme.errorColor.withAlpha(140),
-                    ),
-                    onTap: _confirmDeleteAccount,
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 110),
-          ],
+              const SizedBox(height: 110),
+            ],
+          ),
         ),
       ),
     );

@@ -26,6 +26,7 @@ class _RegisterPageState extends State<RegisterPage> {
 
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
+  bool _isLoading = false;
 
   @override
   void dispose() {
@@ -48,17 +49,13 @@ class _RegisterPageState extends State<RegisterPage> {
     if (value == null || value.trim().isEmpty) {
       return "Kullanıcı adınızı giriniz.";
     }
-
     if (value.length < 3 || value.length > 20) {
       return "3-20 karakter olmalıdır.";
     }
-
     final regex = RegExp(r'^[a-zA-Z0-9_]+$');
-
     if (!regex.hasMatch(value)) {
       return "Sadece harf, rakam ve _ kullanılabilir.";
     }
-
     return null;
   }
 
@@ -66,13 +63,10 @@ class _RegisterPageState extends State<RegisterPage> {
     if (value == null || value.trim().isEmpty) {
       return "E-posta giriniz.";
     }
-
     final regex = RegExp(r'^[^@]+@[^@]+\.[^@]+');
-
     if (!regex.hasMatch(value.trim())) {
       return "Geçerli bir e-posta giriniz.";
     }
-
     return null;
   }
 
@@ -83,19 +77,15 @@ class _RegisterPageState extends State<RegisterPage> {
     if (value.length < 6) {
       return "Şifre en az 6 karakter olmalıdır.";
     }
-
     if (!RegExp(r'(?=.*[a-z])').hasMatch(value)) {
       return "Şifre en az 1 küçük harf içermelidir.";
     }
-
     if (!RegExp(r'(?=.*[A-Z])').hasMatch(value)) {
       return "Şifre en az 1 büyük harf içermelidir.";
     }
-
     if (!RegExp(r'(?=.*\d)').hasMatch(value)) {
       return "Şifre en az 1 rakam içermelidir.";
     }
-
     return null;
   }
 
@@ -103,16 +93,16 @@ class _RegisterPageState extends State<RegisterPage> {
     if (value == null || value.isEmpty) {
       return "Şifreyi tekrar giriniz.";
     }
-
     if (value != _passwordController.text) {
       return "Şifreler uyuşmuyor.";
     }
-
     return null;
   }
 
   Future<void> _register() async {
     if (!_formKey.currentState!.validate()) return;
+
+    setState(() => _isLoading = true);
 
     try {
       final response = await api.post(
@@ -124,16 +114,14 @@ class _RegisterPageState extends State<RegisterPage> {
           "password": _passwordController.text,
         },
       );
-      print(response.statusCode);
-      print(response.body);
 
       final data = jsonDecode(response.body);
 
       if (response.statusCode == 201) {
         final prefs = await SharedPreferences.getInstance();
-
         final token = data["data"]["token"];
         final user = data["data"]["user"];
+
         await prefs.setString("token", token);
         if (user != null && user["id"] != null) {
           final userId = user["id"] is int
@@ -141,15 +129,15 @@ class _RegisterPageState extends State<RegisterPage> {
               : int.parse(user["id"].toString());
           await prefs.setInt("userId", userId);
         }
+
         final fcmToken = await FirebaseMessaging.instance.getToken();
-
-        print("REGISTER FCM TOKEN: $fcmToken");
-
-        await api.put(
-          url: "auth/fcm-token",
-          token: token,
-          body: {"fcm_token": fcmToken},
-        );
+        if (fcmToken != null) {
+          await api.put(
+            url: "auth/fcm-token",
+            token: token,
+            body: {"fcm_token": fcmToken},
+          );
+        }
 
         if (!mounted) return;
 
@@ -179,118 +167,146 @@ class _RegisterPageState extends State<RegisterPage> {
         message: "Sunucuya bağlanılamadı: $e",
         isError: true,
       );
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final subColor = AppTheme.getSectionHeaderColor(isDark);
+    final onSurfaceColor = Theme.of(context).colorScheme.onSurface;
+
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         leading: BackButton(onPressed: () => Navigator.pop(context)),
-        title: Text(
+        title: const Text(
           "Kayıt Ol",
-          style: Theme.of(
-            context,
-          ).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold),
+          style: TextStyle(
+            fontWeight: FontWeight.w800,
+            fontSize: 19,
+            letterSpacing: -0.3,
+          ),
         ),
+        centerTitle: true,
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
+          physics: const BouncingScrollPhysics(),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
           child: Form(
             key: _formKey,
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                Padding(
+                  padding: const EdgeInsets.only(left: 4, bottom: 8),
+                  child: Text(
+                    "HESAP BİLGİLERİ",
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.8,
+                      color: subColor,
+                    ),
+                  ),
+                ),
                 TextFormField(
                   controller: _nameController,
+                  style: TextStyle(color: onSurfaceColor),
                   validator: _validateName,
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     labelText: "Ad Soyad",
-                    prefixIcon: Icon(Icons.person),
+                    prefixIcon: Icon(Icons.person, color: subColor),
                   ),
                 ),
-
-                const SizedBox(height: 18),
-
+                const SizedBox(height: 14),
                 TextFormField(
                   controller: _usernameController,
+                  style: TextStyle(color: onSurfaceColor),
                   validator: _validateUsername,
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     labelText: "Kullanıcı Adı",
-                    prefixIcon: Icon(Icons.account_circle),
+                    prefixIcon: Icon(Icons.alternate_email_rounded, color: subColor),
                   ),
                 ),
-
-                const SizedBox(height: 18),
-
+                const SizedBox(height: 14),
                 TextFormField(
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
+                  style: TextStyle(color: onSurfaceColor),
                   validator: _validateEmail,
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     labelText: "E-posta",
-                    prefixIcon: Icon(Icons.email),
+                    prefixIcon: Icon(Icons.email, color: subColor),
                   ),
                 ),
-
-                const SizedBox(height: 18),
-
+                const SizedBox(height: 14),
                 TextFormField(
                   controller: _passwordController,
                   obscureText: _obscurePassword,
+                  style: TextStyle(color: onSurfaceColor),
                   validator: _validatePassword,
                   decoration: InputDecoration(
                     labelText: "Şifre",
-                    prefixIcon: const Icon(Icons.lock),
+                    prefixIcon: Icon(Icons.lock, color: subColor),
                     suffixIcon: IconButton(
                       icon: Icon(
                         _obscurePassword
-                            ? Icons.visibility_off
-                            : Icons.visibility,
+                            ? Icons.visibility_off_outlined
+                            : Icons.visibility_outlined,
+                        color: subColor,
                       ),
                       onPressed: () {
-                        setState(() {
-                          _obscurePassword = !_obscurePassword;
-                        });
+                        setState(() => _obscurePassword = !_obscurePassword);
                       },
                     ),
                   ),
                 ),
-
-                const SizedBox(height: 18),
-
+                const SizedBox(height: 14),
                 TextFormField(
                   controller: _confirmPasswordController,
                   obscureText: _obscureConfirmPassword,
+                  style: TextStyle(color: onSurfaceColor),
                   validator: _validateConfirmPassword,
                   decoration: InputDecoration(
                     labelText: "Şifre Tekrar",
-                    prefixIcon: const Icon(Icons.lock_reset),
+                    prefixIcon: Icon(Icons.lock_reset, color: subColor),
                     suffixIcon: IconButton(
                       icon: Icon(
                         _obscureConfirmPassword
-                            ? Icons.visibility_off
-                            : Icons.visibility,
+                            ? Icons.visibility_off_outlined
+                            : Icons.visibility_outlined,
+                        color: subColor,
                       ),
                       onPressed: () {
-                        setState(() {
-                          _obscureConfirmPassword = !_obscureConfirmPassword;
-                        });
+                        setState(() => _obscureConfirmPassword = !_obscureConfirmPassword);
                       },
                     ),
                   ),
                 ),
-
-                const SizedBox(height: 35),
-
+                const SizedBox(height: 32),
                 SizedBox(
                   width: double.infinity,
+                  height: 50,
                   child: ElevatedButton(
-                    onPressed: _register,
-                    child: const Text("Kayıt Ol"),
+                    style: AppTheme.standardButtonStyle(context),
+                    onPressed: _isLoading ? null : _register,
+                    child: _isLoading
+                        ? SizedBox(
+                            width: 22,
+                            height: 22,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2.2,
+                              color: isDark ? const Color(0xFF121114) : Colors.white,
+                            ),
+                          )
+                        : const Text("Kayıt Ol"),
                   ),
                 ),
+                const SizedBox(height: 40),
               ],
             ),
           ),

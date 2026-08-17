@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
@@ -53,11 +52,10 @@ class _GroupDetailPageState extends State<GroupDetailPage> {
     currentGroupPhotoUrl = widget.groupPhotoUrl;
     currentParticipants = List.from(widget.participants);
 
-    // 👈 Sayfa açılır açılmaz veritabanından güncel açıklamayı çekiyoruz
     _fetchRoomDetails();
   }
 
-  Future<void> _fetchRoomDetails() async { //güncel grup bilgilri
+  Future<void> _fetchRoomDetails() async {
     try {
       final response = await api.rooms(
         token: widget.token,
@@ -98,97 +96,95 @@ class _GroupDetailPageState extends State<GroupDetailPage> {
     }
   }
 
-Future<void> _pickAndUploadGroupPhoto() async { //grup fotosu secip backende gönderme
-  if (!isAdmin) return;
+  Future<void> _pickAndUploadGroupPhoto() async {
+    if (!isAdmin) return;
 
-  final source = await showModalBottomSheet<ImageSource>(
-    context: context,
-    builder: (context) {
-      return SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.camera_alt_rounded),
-              title: const Text("Kamerayı Aç"),
-              onTap: () {
-                Navigator.pop(context, ImageSource.camera);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.photo_library_rounded),
-              title: const Text("Galeriden Seç"),
-              onTap: () {
-                Navigator.pop(context, ImageSource.gallery);
-              },
-            ),
-          ],
-        ),
-      );
-    },
-  );
-
-  if (source == null) return;
-
-  final XFile? image = await _picker.pickImage(
-    source: source,
-    imageQuality: 75,
-  );
-
-  if (image == null) return;
-
-  if (!mounted) return;
-  setState(() => isUploadingPhoto = true);
-
-  try {
-    final streamedRes = await api.editGroupImage(
-      token: widget.token,
-      roomId: widget.roomId,
-      adminId: widget.currentUserId,
-      filePath: image.path,
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.camera_alt_rounded),
+                title: const Text("Kamerayı Aç"),
+                onTap: () => Navigator.pop(context, ImageSource.camera),
+              ),
+              ListTile(
+                leading: const Icon(Icons.photo_library_rounded),
+                title: const Text("Galeriden Seç"),
+                onTap: () => Navigator.pop(context, ImageSource.gallery),
+              ),
+            ],
+          ),
+        );
+      },
     );
 
-    final response = await http.Response.fromStream(streamedRes);
+    if (source == null) return;
 
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
+    final XFile? image = await _picker.pickImage(
+      source: source,
+      maxWidth: 1000,
+      maxHeight: 1000,
+      imageQuality: 80,
+    );
 
-      if (!mounted) return;
+    if (image == null) return;
 
-      setState(() {
-        currentGroupPhotoUrl = data["data"]["photo_url"];
-      });
-
-      AppTheme.showSnackBar(
-        context,
-        message: "Grup fotoğrafı güncellendi!",
-        isError: false,
-      );
-    } else {
-      if (!mounted) return;
-
-      AppTheme.showSnackBar(
-        context,
-        message: "Fotoğraf güncellenemedi.",
-        isError: true,
-      );
-    }
-  } catch (e) {
     if (!mounted) return;
+    setState(() => isUploadingPhoto = true);
 
-    AppTheme.showSnackBar(
-      context,
-      message: "Hata: $e",
-      isError: true,
-    );
-  } finally {
-    if (mounted) {
-      setState(() => isUploadingPhoto = false);
+    try {
+      final streamedRes = await api.editGroupImage(
+        token: widget.token,
+        roomId: widget.roomId,
+        adminId: widget.currentUserId,
+        filePath: image.path,
+      );
+
+      final response = await http.Response.fromStream(streamedRes);
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+
+        if (!mounted) return;
+
+        setState(() {
+          currentGroupPhotoUrl = data["data"]["photo_url"];
+        });
+
+        AppTheme.showSnackBar(
+          context,
+          message: "Grup fotoğrafı güncellendi!",
+          isError: false,
+        );
+      } else {
+        if (!mounted) return;
+
+        AppTheme.showSnackBar(
+          context,
+          message: "Fotoğraf güncellenemedi.",
+          isError: true,
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+
+      AppTheme.showSnackBar(context, message: "Hata: $e", isError: true);
+    } finally {
+      if (mounted) {
+        setState(() => isUploadingPhoto = false);
+      }
     }
   }
-}
 
-  void _showEditGroupInfoDialog() { //grup adı ve acıklaması degistirir
+  void _showEditGroupInfoDialog() {
     if (!isAdmin) return;
     final nameController = TextEditingController(text: currentRoomName);
     final descController = TextEditingController(text: currentRoomDesc);
@@ -196,8 +192,9 @@ Future<void> _pickAndUploadGroupPhoto() async { //grup fotosu secip backende gö
     showDialog(
       context: context,
       builder: (context) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
         return AlertDialog(
-          backgroundColor: Theme.of(context).colorScheme.surface,
+          backgroundColor: AppTheme.getSurfaceColor(isDark),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
           ),
@@ -210,23 +207,13 @@ Future<void> _pickAndUploadGroupPhoto() async { //grup fotosu secip backende gö
             children: [
               TextField(
                 controller: nameController,
-                decoration: InputDecoration(
-                  labelText: "Grup Adı",
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
+                decoration: const InputDecoration(labelText: "Grup Adı"),
               ),
               const SizedBox(height: 12),
               TextField(
                 controller: descController,
                 maxLines: 2,
-                decoration: InputDecoration(
-                  labelText: "Grup Açıklaması",
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
+                decoration: const InputDecoration(labelText: "Grup Açıklaması"),
               ),
             ],
           ),
@@ -238,6 +225,10 @@ Future<void> _pickAndUploadGroupPhoto() async { //grup fotosu secip backende gö
             ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppTheme.primaryNavy,
+                minimumSize: const Size(90, 40),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
               ),
               onPressed: () async {
                 final newName = nameController.text.trim();
@@ -279,7 +270,10 @@ Future<void> _pickAndUploadGroupPhoto() async { //grup fotosu secip backende gö
               },
               child: const Text(
                 "Kaydet",
-                style: TextStyle(color: Colors.white),
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
           ],
@@ -288,7 +282,7 @@ Future<void> _pickAndUploadGroupPhoto() async { //grup fotosu secip backende gö
     );
   }
 
-  void _showConfirmRemoveDialog({ //gruptan üye cikarma
+  void _showConfirmRemoveDialog({
     required dynamic userId,
     required String username,
     required int index,
@@ -296,8 +290,9 @@ Future<void> _pickAndUploadGroupPhoto() async { //grup fotosu secip backende gö
     showDialog(
       context: context,
       builder: (dialogContext) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
         return AlertDialog(
-          backgroundColor: Theme.of(context).colorScheme.surface,
+          backgroundColor: AppTheme.getSurfaceColor(isDark),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
           ),
@@ -307,7 +302,6 @@ Future<void> _pickAndUploadGroupPhoto() async { //grup fotosu secip backende gö
           ),
           content: Text(
             "@$username kullanıcısını gruptan çıkarmak istediğinize emin misiniz?",
-            style: const TextStyle(fontSize: 15),
           ),
           actions: [
             TextButton(
@@ -316,10 +310,10 @@ Future<void> _pickAndUploadGroupPhoto() async { //grup fotosu secip backende gö
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red.shade100,
-                foregroundColor: Colors.red.shade800,
+                backgroundColor: AppTheme.errorColor,
+                minimumSize: const Size(90, 40),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(10),
                 ),
               ),
               onPressed: () async {
@@ -363,7 +357,13 @@ Future<void> _pickAndUploadGroupPhoto() async { //grup fotosu secip backende gö
                   }
                 }
               },
-              child: const Text("Evet, Çıkar"),
+              child: const Text(
+                "Evet, Çıkar",
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ),
           ],
         );
@@ -371,8 +371,7 @@ Future<void> _pickAndUploadGroupPhoto() async { //grup fotosu secip backende gö
     );
   }
 
-  void _showSelectNewAdminDialog() { //yeni yönetici seçme
-    // Kendisi dışındaki kullanıcıları alıyoruz.
+  void _showSelectNewAdminDialog() {
     final otherParticipants = currentParticipants
         .where((p) => p["id"].toString() != widget.currentUserId.toString())
         .toList();
@@ -391,10 +390,11 @@ Future<void> _pickAndUploadGroupPhoto() async { //grup fotosu secip backende gö
     showDialog(
       context: context,
       builder: (dialogContext) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
         return StatefulBuilder(
           builder: (context, setDialogState) {
             return AlertDialog(
-              backgroundColor: Theme.of(context).colorScheme.surface,
+              backgroundColor: AppTheme.getSurfaceColor(isDark),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(20),
               ),
@@ -409,7 +409,6 @@ Future<void> _pickAndUploadGroupPhoto() async { //grup fotosu secip backende gö
                     "Gruptan ayrılmadan önce başka bir üyeyi yeni yönetici olarak seçmelisiniz.",
                   ),
                   const SizedBox(height: 16),
-
                   SizedBox(
                     width: MediaQuery.of(context).size.width * 0.75,
                     height: 300,
@@ -418,16 +417,12 @@ Future<void> _pickAndUploadGroupPhoto() async { //grup fotosu secip backende gö
                       separatorBuilder: (_, __) => const SizedBox(height: 4),
                       itemBuilder: (context, index) {
                         final user = otherParticipants[index];
-
                         final userId = user["id"];
-
                         final name =
                             user["full_name"] ??
                             user["user_name"] ??
                             "Kullanıcı";
-
                         final username = user["user_name"] ?? "";
-
                         final isSelected =
                             selectedUser != null &&
                             selectedUser["id"].toString() == userId.toString();
@@ -437,28 +432,24 @@ Future<void> _pickAndUploadGroupPhoto() async { //grup fotosu secip backende gö
                             borderRadius: BorderRadius.circular(12),
                           ),
                           selected: isSelected,
-                          selectedTileColor: AppTheme.primaryNavy.withAlpha(20),
-
+                          selectedTileColor: AppTheme.primaryNavy.withAlpha(25),
                           leading: CircleAvatar(
-                            backgroundColor: AppTheme.primaryNavy.withAlpha(30),
+                            backgroundColor: AppTheme.getIconBg(isDark),
                             child: Text(
                               name.toString().isNotEmpty
                                   ? name.toString()[0].toUpperCase()
                                   : "?",
-                              style: const TextStyle(
-                                color: AppTheme.primaryNavy,
+                              style: TextStyle(
+                                color: Theme.of(context).colorScheme.onSurface,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
                           ),
-
                           title: Text(
                             name.toString(),
                             style: const TextStyle(fontWeight: FontWeight.w600),
                           ),
-
                           subtitle: Text("@$username"),
-
                           trailing: Icon(
                             isSelected
                                 ? Icons.check_circle_rounded
@@ -467,7 +458,6 @@ Future<void> _pickAndUploadGroupPhoto() async { //grup fotosu secip backende gö
                                 ? AppTheme.primaryNavy
                                 : Colors.grey,
                           ),
-
                           onTap: () {
                             setDialogState(() {
                               selectedUser = user;
@@ -486,17 +476,25 @@ Future<void> _pickAndUploadGroupPhoto() async { //grup fotosu secip backende gö
                 ),
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.redAccent,
-                    foregroundColor: Colors.white,
+                    backgroundColor: AppTheme.errorColor,
+                    minimumSize: const Size(90, 40),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
                   ),
                   onPressed: selectedUser == null
                       ? null
                       : () {
                           Navigator.pop(dialogContext);
-
                           _showConfirmLeaveWithNewAdminDialog(selectedUser);
                         },
-                  child: const Text("Devam Et"),
+                  child: const Text(
+                    "Devam Et",
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
               ],
             );
@@ -506,17 +504,17 @@ Future<void> _pickAndUploadGroupPhoto() async { //grup fotosu secip backende gö
     );
   }
 
-  void _showConfirmLeaveWithNewAdminDialog(dynamic selectedUser) { //yöneticinin ayırlması
+  void _showConfirmLeaveWithNewAdminDialog(dynamic selectedUser) {
     final name =
         selectedUser["full_name"] ?? selectedUser["user_name"] ?? "Kullanıcı";
-
     final userId = selectedUser["id"];
 
     showDialog(
       context: context,
       builder: (dialogContext) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
         return AlertDialog(
-          backgroundColor: Theme.of(context).colorScheme.surface,
+          backgroundColor: AppTheme.getSurfaceColor(isDark),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
           ),
@@ -534,20 +532,19 @@ Future<void> _pickAndUploadGroupPhoto() async { //grup fotosu secip backende gö
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.redAccent,
-                foregroundColor: Colors.white,
+                backgroundColor: AppTheme.errorColor,
+                minimumSize: const Size(90, 40),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
               ),
               onPressed: () async {
                 Navigator.pop(dialogContext);
-
                 try {
                   final res = await api.leaveGroup(
                     token: widget.token,
                     roomId: widget.roomId,
                     userId: widget.currentUserId,
-
-                    // BURASI BACKEND'DEKİ GERÇEK PARAMETREYE
-                    // GÖRE AYARLANACAK.
                     newAdminId: int.parse(userId.toString()),
                   );
 
@@ -563,10 +560,8 @@ Future<void> _pickAndUploadGroupPhoto() async { //grup fotosu secip backende gö
                   } else {
                     String errorMsg =
                         "Gruptan ayrılamadınız (${res.statusCode}).";
-
                     try {
                       final data = jsonDecode(res.body);
-
                       if (data["error"] != null) {
                         errorMsg = data["error"].toString();
                       }
@@ -590,7 +585,13 @@ Future<void> _pickAndUploadGroupPhoto() async { //grup fotosu secip backende gö
                   }
                 }
               },
-              child: const Text("Ayrıl"),
+              child: const Text(
+                "Ayrıl",
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ),
           ],
         );
@@ -598,7 +599,7 @@ Future<void> _pickAndUploadGroupPhoto() async { //grup fotosu secip backende gö
     );
   }
 
-  void _showLeaveGroupDialog() { //gruptan ayrilma onayı
+  void _showLeaveGroupDialog() {
     if (isAdmin) {
       _showSelectNewAdminDialog();
       return;
@@ -607,8 +608,9 @@ Future<void> _pickAndUploadGroupPhoto() async { //grup fotosu secip backende gö
     showDialog(
       context: context,
       builder: (dialogContext) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
         return AlertDialog(
-          backgroundColor: Theme.of(context).colorScheme.surface,
+          backgroundColor: AppTheme.getSurfaceColor(isDark),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
           ),
@@ -617,8 +619,7 @@ Future<void> _pickAndUploadGroupPhoto() async { //grup fotosu secip backende gö
             style: TextStyle(fontWeight: FontWeight.bold),
           ),
           content: const Text(
-            "Bu gruptan ayrılmak istediğinize emin misiniz? "
-            "Mesajları tekrar göremezsiniz.",
+            "Bu gruptan ayrılmak istediğinize emin misiniz? Mesajları tekrar göremezsiniz.",
           ),
           actions: [
             TextButton(
@@ -627,12 +628,14 @@ Future<void> _pickAndUploadGroupPhoto() async { //grup fotosu secip backende gö
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.redAccent,
-                foregroundColor: Colors.white,
+                backgroundColor: AppTheme.errorColor,
+                minimumSize: const Size(90, 40),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
               ),
               onPressed: () async {
                 Navigator.pop(dialogContext);
-
                 try {
                   final res = await api.leaveGroup(
                     token: widget.token,
@@ -652,10 +655,8 @@ Future<void> _pickAndUploadGroupPhoto() async { //grup fotosu secip backende gö
                   } else {
                     String errorMsg =
                         "Gruptan ayrılamadınız (${res.statusCode}).";
-
                     try {
                       final data = jsonDecode(res.body);
-
                       if (data["error"] != null) {
                         errorMsg = data["error"].toString();
                       }
@@ -679,7 +680,13 @@ Future<void> _pickAndUploadGroupPhoto() async { //grup fotosu secip backende gö
                   }
                 }
               },
-              child: const Text("Ayrıl"),
+              child: const Text(
+                "Ayrıl",
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ),
           ],
         );
@@ -687,7 +694,7 @@ Future<void> _pickAndUploadGroupPhoto() async { //grup fotosu secip backende gö
     );
   }
 
-  void _showAddParticipantDialog() {//katılımcı ekleme dialogu
+  void _showAddParticipantDialog() {
     if (!isAdmin) return;
 
     final TextEditingController searchController = TextEditingController();
@@ -698,6 +705,7 @@ Future<void> _pickAndUploadGroupPhoto() async { //grup fotosu secip backende gö
     showDialog(
       context: context,
       builder: (dialogContext) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
         return StatefulBuilder(
           builder: (context, setDialogState) {
             void performSearch(String query) async {
@@ -756,7 +764,7 @@ Future<void> _pickAndUploadGroupPhoto() async { //grup fotosu secip backende gö
             }
 
             return AlertDialog(
-              backgroundColor: Theme.of(context).colorScheme.surface,
+              backgroundColor: AppTheme.getSurfaceColor(isDark),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(20),
               ),
@@ -820,22 +828,13 @@ Future<void> _pickAndUploadGroupPhoto() async { //grup fotosu secip backende gö
                       ),
                       const SizedBox(height: 12),
                     ],
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: searchController,
-                            onChanged: performSearch,
-                            decoration: InputDecoration(
-                              labelText: "Katılımcı Ara",
-                              prefixIcon: const Icon(Icons.search_rounded),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
+                    TextField(
+                      controller: searchController,
+                      onChanged: performSearch,
+                      decoration: const InputDecoration(
+                        labelText: "Katılımcı Ara",
+                        prefixIcon: Icon(Icons.search_rounded),
+                      ),
                     ),
                     if (isSearching)
                       const Padding(
@@ -846,9 +845,13 @@ Future<void> _pickAndUploadGroupPhoto() async { //grup fotosu secip backende gö
                       const SizedBox(height: 8),
                       Container(
                         decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.surface,
+                          color: AppTheme.getSurfaceColor(isDark),
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.grey.shade300),
+                          border: Border.all(
+                            color: isDark
+                                ? AppTheme.darkpurple2
+                                : const Color(0xFFE2DFE7),
+                          ),
                         ),
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
@@ -893,6 +896,10 @@ Future<void> _pickAndUploadGroupPhoto() async { //grup fotosu secip backende gö
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppTheme.primaryNavy,
                     foregroundColor: Colors.white,
+                    minimumSize: const Size(100, 40),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
                   ),
                   onPressed: () async {
                     if (selectedUsers.isEmpty) return;
@@ -915,7 +922,6 @@ Future<void> _pickAndUploadGroupPhoto() async { //grup fotosu secip backende gö
 
                         if (res.statusCode == 200 || res.statusCode == 201) {
                           final resData = jsonDecode(res.body);
-                          // Backend'den eklenen kullanıcı objesi dönüyorsa al, dönmüyorsa eldeki user'ı formatla
                           final Map<String, dynamic> addedUserObj =
                               resData["data"]?["added_user"] ??
                               {
@@ -959,10 +965,84 @@ Future<void> _pickAndUploadGroupPhoto() async { //grup fotosu secip backende gö
     );
   }
 
+  Widget _buildSectionHeader(String title, bool isDark) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Padding(
+        padding: const EdgeInsets.only(left: 4, bottom: 8),
+        child: Text(
+          title.toUpperCase(),
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.8,
+            color: AppTheme.getSectionHeaderColor(isDark),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInfoRow({
+    required IconData icon,
+    required String label,
+    required String value,
+    required bool isDark,
+  }) {
+    final onSurfaceColor = Theme.of(context).colorScheme.onSurface;
+    final subColor = AppTheme.getSectionHeaderColor(isDark);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+      child: Row(
+        children: [
+          Container(
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(
+              color: AppTheme.getIconBg(isDark),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, size: 19, color: AppTheme.getIconFg(isDark)),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label.toUpperCase(),
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.7,
+                    color: subColor,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  value.isNotEmpty ? value : "Belirtilmemiş",
+                  style: TextStyle(
+                    fontSize: 14.5,
+                    fontWeight: FontWeight.w600,
+                    color: onSurfaceColor,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final cardBgColor = Theme.of(context).colorScheme.surface;
-    final onSurfaceColor = Theme.of(context).colorScheme.onSurface;
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final surfaceColor = AppTheme.getSurfaceColor(isDark);
+    final onSurfaceColor = theme.colorScheme.onSurface;
+
     final String firstLetter = currentRoomName.isNotEmpty
         ? currentRoomName[0].toUpperCase()
         : "G";
@@ -973,47 +1053,16 @@ Future<void> _pickAndUploadGroupPhoto() async { //grup fotosu secip backende gö
         : null;
 
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      extendBodyBehindAppBar: true,
-      appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(kToolbarHeight),
-        child: ClipRect(
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-            child: Container(
-              decoration: BoxDecoration(
-                color: cardBgColor.withAlpha(200),
-                border: Border(
-                  bottom: BorderSide(
-                    color: onSurfaceColor.withAlpha(12),
-                    width: 1,
-                  ),
-                ),
-              ),
-              child: AppBar(
-                title: const Text(
-                  "Grup Bilgisi",
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                elevation: 0,
-                backgroundColor: Colors.transparent,
-                surfaceTintColor: Colors.transparent,
-              ),
-            ),
-          ),
-        ),
-      ),
+      backgroundColor: theme.scaffoldBackgroundColor,
+      appBar: AppBar(title: const Text("Grup Bilgisi")),
       body: SingleChildScrollView(
         physics: const BouncingScrollPhysics(),
-        padding: EdgeInsets.only(
-          top: MediaQuery.of(context).padding.top + kToolbarHeight + 10,
-          bottom: 40,
-        ),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
         child: Column(
           children: [
-            const SizedBox(height: 10),
+            const SizedBox(height: 8),
 
-            // 1. GRUP PROFİL FOTOĞRAFI
+            // 1. GRUP PROFİL FOTOĞRAFI (Kamera butonu yerinde korunarak ProfilePage stiline uyarlandı)
             Center(
               child: Stack(
                 children: [
@@ -1022,35 +1071,48 @@ Future<void> _pickAndUploadGroupPhoto() async { //grup fotosu secip backende gö
                     height: 110,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      gradient: const LinearGradient(
-                        colors: [AppTheme.primaryNavy, AppTheme.secondaryNavy],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
+                      color: surfaceColor,
+                      border: Border.all(
+                        color: AppTheme.getAvatarBorder(isDark),
+                        width: 2,
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: AppTheme.primaryNavy.withAlpha(50),
-                          blurRadius: 22,
-                          offset: const Offset(0, 10),
+                          color: Colors.black.withAlpha(isDark ? 80 : 10),
+                          blurRadius: 16,
+                          offset: const Offset(0, 6),
                         ),
                       ],
                     ),
                     alignment: Alignment.center,
-                    child: fullGroupPhotoUrl != null
+                    child: isUploadingPhoto
+                        ? const CircularProgressIndicator(
+                            strokeWidth: 2.5,
+                            color: Colors.black54,
+                          )
+                        : fullGroupPhotoUrl != null
                         ? ClipOval(
                             child: Image.network(
                               fullGroupPhotoUrl,
                               width: 110,
                               height: 110,
                               fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => Text(
+                                firstLetter,
+                                style: TextStyle(
+                                  fontSize: 36,
+                                  fontWeight: FontWeight.bold,
+                                  color: onSurfaceColor,
+                                ),
+                              ),
                             ),
                           )
                         : Text(
                             firstLetter,
-                            style: const TextStyle(
-                              fontSize: 42,
+                            style: TextStyle(
+                              fontSize: 36,
                               fontWeight: FontWeight.bold,
-                              color: Colors.white,
+                              color: onSurfaceColor,
                             ),
                           ),
                   ),
@@ -1067,68 +1129,56 @@ Future<void> _pickAndUploadGroupPhoto() async { //grup fotosu secip backende gö
                           height: 36,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            gradient: const LinearGradient(
-                              colors: [
-                                AppTheme.primaryNavy,
-                                AppTheme.secondaryNavy,
-                              ],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            ),
-                            border: Border.all(
-                              color: cardBgColor,
-                              width: 3,
-                            ),
+                            color: isDark
+                                ? const Color(0xFF2C2A31)
+                                : Colors.black,
+                            border: Border.all(color: surfaceColor, width: 3),
                             boxShadow: [
                               BoxShadow(
-                                color: AppTheme.primaryNavy.withAlpha(70),
-                                blurRadius: 10,
-                                offset: const Offset(0, 3),
+                                color: Colors.black.withAlpha(50),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
                               ),
                             ],
                           ),
                           alignment: Alignment.center,
-                          child: isUploadingPhoto
-                              ? const SizedBox(
-                                  width: 16,
-                                  height: 16,
-                                  child: CircularProgressIndicator(
-                                    color: Colors.white,
-                                    strokeWidth: 2,
-                                  ),
-                                )
-                              : const Icon(
-                                  Icons.camera_alt_rounded,
-                                  size: 16,
-                                  color: Colors.white,
-                                ),
+                          child: const Icon(
+                            Icons.camera_alt_rounded,
+                            size: 16,
+                            color: Colors.white,
+                          ),
                         ),
                       ),
                     ),
                 ],
               ),
             ),
-            const SizedBox(height: 16),
 
-            // 2. GRUP ADI VE DÜZENLEME
+            const SizedBox(height: 14),
+
+            // 2. GRUP ADI VE DÜZENLEME BUTONU
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text(
-                  currentRoomName,
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: onSurfaceColor,
+                Flexible(
+                  child: Text(
+                    currentRoomName,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 21,
+                      fontWeight: FontWeight.w800,
+                      color: onSurfaceColor,
+                      letterSpacing: -0.4,
+                    ),
                   ),
                 ),
                 if (isAdmin) ...[
                   const SizedBox(width: 6),
                   IconButton(
-                    icon: const Icon(
-                      Icons.edit_rounded,
-                      color: AppTheme.primaryNavy,
-                      size: 20,
+                    icon: Icon(
+                      Icons.edit_note_rounded,
+                      color: onSurfaceColor.withAlpha(180),
+                      size: 22,
                     ),
                     onPressed: _showEditGroupInfoDialog,
                   ),
@@ -1138,364 +1188,325 @@ Future<void> _pickAndUploadGroupPhoto() async { //grup fotosu secip backende gö
             Text(
               "${currentParticipants.length} Katılımcı",
               style: TextStyle(
-                color: onSurfaceColor.withAlpha(140),
+                color: AppTheme.getSectionHeaderColor(isDark),
                 fontSize: 13,
-              ),
-            ),
-            const SizedBox(height: 20),
-
-            // 3. GRUP AÇIKLAMASI KARTI
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: cardBgColor,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: onSurfaceColor.withAlpha(20)),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withAlpha(8),
-                      blurRadius: 16,
-                      spreadRadius: -4,
-                      offset: const Offset(0, 8),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      "Grup Açıklaması",
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: AppTheme.primaryNavy,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      currentRoomDesc,
-                      style: TextStyle(fontSize: 14, color: onSurfaceColor),
-                    ),
-                  ],
-                ),
+                fontWeight: FontWeight.w600,
               ),
             ),
 
-            const SizedBox(height: 16),
-
-            // 5. YÖNETİCİ ÖZEL AKSİYONU: ÜYE EKLE
-            if (isAdmin)
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: cardBgColor,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: onSurfaceColor.withAlpha(20)),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withAlpha(8),
-                      blurRadius: 16,
-                      spreadRadius: -4,
-                      offset: const Offset(0, 8),
-                    ),
-                  ],
-                  ),
-                  child: ListTile(
-                    leading: Container(
-                      width: 42,
-                      height: 42,
-                      decoration: const BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: LinearGradient(
-                          colors: [
-                            AppTheme.primaryNavy,
-                            AppTheme.secondaryNavy,
-                          ],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                      ),
-                      child: const Icon(
-                        Icons.person_add_rounded,
-                        color: Colors.white,
-                        size: 20,
-                      ),
-                    ),
-                    title: const Text(
-                      "Katılımcı Ekle",
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    onTap: _showAddParticipantDialog,
-                  ),
-                ),
-              ),
-
-            const SizedBox(height: 20),
-
-            // 6. KATILIMCI LİSTESİ
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: cardBgColor,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: onSurfaceColor.withAlpha(20)),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withAlpha(8),
-                      blurRadius: 16,
-                      spreadRadius: -4,
-                      offset: const Offset(0, 8),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
-                      child: Text(
-                        "Grup Katılımcıları (${currentParticipants.length})",
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.bold,
-                          color: AppTheme.primaryNavy,
-                        ),
-                      ),
-                    ),
-                    ListView.separated(
-                      shrinkWrap: true,
-                      padding: EdgeInsets.zero,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: currentParticipants.length,
-                      separatorBuilder: (_, __) => Divider(
-                        height: 1,
-                        indent: 60,
-                        endIndent: 16,
-                        color: onSurfaceColor.withAlpha(15),
-                      ),
-                      itemBuilder: (context, index) {
-                        final p = currentParticipants[index];
-                        final name =
-                            p["full_name"] ?? p["user_name"] ?? "Kullanıcı";
-                        final username = p["user_name"] ?? "";
-                        final userId = p["id"];
-                        final bool isUserAdmin = userId == widget.adminId;
-                        final bool isMe = userId == widget.currentUserId;
-                        final firstLetter = name.isNotEmpty
-                            ? name[0].toUpperCase()
-                            : "?";
-
-                        final String? userPhotoPath =
-                            p["profile_photo"] ?? p["display_photo"];
-                        final String? fullUserPhotoUrl =
-                            (userPhotoPath != null && userPhotoPath.isNotEmpty)
-                            ? "${ApiClient.baseUrl}${userPhotoPath.startsWith('/') ? userPhotoPath : '/$userPhotoPath'}"
-                            : null;
-
-                        return ListTile(
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 2,
-                          ),
-                          leading: Container(
-                            width: 38,
-                            height: 38,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              gradient: fullUserPhotoUrl == null
-                                  ? LinearGradient(
-                                      colors: [
-                                        AppTheme.primaryNavy.withAlpha(190),
-                                        AppTheme.secondaryNavy.withAlpha(190),
-                                      ],
-                                      begin: Alignment.topLeft,
-                                      end: Alignment.bottomRight,
-                                    )
-                                  : null,
-                            ),
-                            child: fullUserPhotoUrl != null
-                                ? ClipOval(
-                                    child: Image.network(
-                                      fullUserPhotoUrl,
-                                      width: 38,
-                                      height: 38,
-                                      fit: BoxFit.cover,
-                                      errorBuilder: (_, __, ___) => Center(
-                                        child: Text(
-                                          firstLetter,
-                                          style: const TextStyle(
-                                            color: Colors.white,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  )
-                                : Center(
-                                    child: Text(
-                                      firstLetter,
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
-                          ),
-                          title: Text(
-                            name + (isMe ? " (Sen)" : ""),
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 14,
-                            ),
-                          ),
-                          subtitle: Text(
-                            "@$username",
-                            style: const TextStyle(fontSize: 11),
-                          ),
-                          trailing: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              if (isUserAdmin)
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 8,
-                                    vertical: 3,
-                                  ),
-                                  margin: const EdgeInsets.only(right: 4),
-                                  decoration: BoxDecoration(
-                                    color: AppTheme.primaryNavy.withAlpha(30),
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: const Text(
-                                    "Yönetici",
-                                    style: TextStyle(
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.bold,
-                                      color: AppTheme.primaryNavy,
-                                    ),
-                                  ),
-                                ),
-
-                              PopupMenuButton<String>(
-                                icon: Icon(
-                                  Icons.more_vert_rounded,
-                                  color: onSurfaceColor.withAlpha(140),
-                                  size: 20,
-                                ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                onSelected: (value) {
-                                  if (value == "remove") {
-                                    _showConfirmRemoveDialog(
-                                      userId: userId,
-                                      username: username,
-                                      index: index,
-                                    );
-                                  } else if (value == "profile") {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (_) =>
-                                            UserProfileDialog(user: p),
-                                      ),
-                                    );
-                                  }
-                                },
-                                itemBuilder: (context) {
-                                  final List<PopupMenuEntry<String>> menuItems =
-                                      [];
-
-                                  if (isAdmin && !isMe) {
-                                    menuItems.add(
-                                      const PopupMenuItem(
-                                        value: "remove",
-                                        child: Row(
-                                          children: [
-                                            Icon(
-                                              Icons.person_remove_rounded,
-                                              color: Colors.redAccent,
-                                              size: 18,
-                                            ),
-                                            SizedBox(width: 8),
-                                            Text(
-                                              "Gruptan Çıkar",
-                                              style: TextStyle(
-                                                color: Colors.redAccent,
-                                                fontSize: 13,
-                                                fontWeight: FontWeight.w600,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    );
-                                  }
-
-                                  menuItems.add(
-                                    PopupMenuItem(
-                                      value: "profile",
-                                      child: Row(
-                                        children: [
-                                          Icon(
-                                            Icons.person_outline_rounded,
-                                            color: onSurfaceColor,
-                                            size: 18,
-                                          ),
-                                          const SizedBox(width: 8),
-                                          const Text(
-                                            "Profili Gör",
-                                            style: TextStyle(fontSize: 13),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  );
-
-                                  return menuItems;
-                                },
-                              ),
-                            ],
-                          ),
-                        );
-                      },
-                    ),
-                  ],
-                ),
-              ),
-            ),
             const SizedBox(height: 24),
 
-            // 7. GRUPTAN AYRIL BUTONU
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: ListTile(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  side: BorderSide(
-                    color: const Color.fromARGB(255, 155, 10, 10).withAlpha(40),
+            // 3. GRUP BİLGİLERİ KARTI (ProfilePage Stili)
+            _buildSectionHeader("Grup Detayları", isDark),
+            Container(
+              decoration: AppTheme.profileCardDecoration(isDark),
+              child: Column(
+                children: [
+                  _buildInfoRow(
+                    icon: Icons.info_outline_rounded,
+                    label: "Grup Açıklaması",
+                    value: currentRoomDesc,
+                    isDark: isDark,
                   ),
+                  Divider(
+                    height: 1,
+                    thickness: 0.7,
+                    indent: 16,
+                    endIndent: 16,
+                    color: onSurfaceColor.withAlpha(isDark ? 16 : 10),
+                  ),
+                  _buildInfoRow(
+                    icon: Icons.groups_rounded,
+                    label: "Toplam Üye",
+                    value: "${currentParticipants.length} Kişi",
+                    isDark: isDark,
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 20),
+
+            // 4. YÖNETİCİ ÖZEL: KATILIMCI EKLE
+            if (isAdmin) ...[
+              _buildSectionHeader("Yönetim", isDark),
+              Container(
+                decoration: AppTheme.profileCardDecoration(isDark),
+                child: ListTile(
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 2,
+                  ),
+                  leading: Container(
+                    width: 38,
+                    height: 38,
+                    decoration: BoxDecoration(
+                      color: AppTheme.getIconBg(isDark),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(
+                      Icons.person_add_rounded,
+                      size: 19,
+                      color: AppTheme.getIconFg(isDark),
+                    ),
+                  ),
+                  title: Text(
+                    "Katılımcı Ekle",
+                    style: TextStyle(
+                      fontSize: 14.5,
+                      fontWeight: FontWeight.w600,
+                      color: onSurfaceColor,
+                    ),
+                  ),
+                  trailing: Icon(
+                    Icons.chevron_right_rounded,
+                    size: 20,
+                    color: onSurfaceColor.withAlpha(100),
+                  ),
+                  onTap: _showAddParticipantDialog,
                 ),
-        
-                leading: const Icon(
-                  Icons.exit_to_app_rounded,
-                  color: Color.fromARGB(255, 155, 10, 10),
+              ),
+              const SizedBox(height: 20),
+            ],
+
+            // 5. KATILIMCI LİSTESİ KARTI
+            _buildSectionHeader(
+              "Grup Katılımcıları (${currentParticipants.length})",
+              isDark,
+            ),
+            Container(
+              decoration: AppTheme.profileCardDecoration(isDark),
+              child: ListView.separated(
+                shrinkWrap: true,
+                padding: EdgeInsets.zero,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: currentParticipants.length,
+                separatorBuilder: (_, __) => Divider(
+                  height: 1,
+                  thickness: 0.7,
+                  indent: 64,
+                  endIndent: 16,
+                  color: onSurfaceColor.withAlpha(isDark ? 16 : 10),
+                ),
+                itemBuilder: (context, index) {
+                  final p = currentParticipants[index];
+                  final name = p["full_name"] ?? p["user_name"] ?? "Kullanıcı";
+                  final username = p["user_name"] ?? "";
+                  final userId = p["id"];
+                  final bool isUserAdmin = userId == widget.adminId;
+                  final bool isMe = userId == widget.currentUserId;
+                  final firstLetter = name.isNotEmpty
+                      ? name[0].toUpperCase()
+                      : "?";
+
+                  final String? userPhotoPath =
+                      p["profile_photo"] ?? p["display_photo"];
+                  final String? fullUserPhotoUrl =
+                      (userPhotoPath != null && userPhotoPath.isNotEmpty)
+                      ? "${ApiClient.baseUrl}${userPhotoPath.startsWith('/') ? userPhotoPath : '/$userPhotoPath'}"
+                      : null;
+
+                  return ListTile(
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 4,
+                    ),
+                    leading: Container(
+                      width: 38,
+                      height: 38,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: AppTheme.getIconBg(isDark),
+                      ),
+                      alignment: Alignment.center,
+                      child: fullUserPhotoUrl != null
+                          ? ClipOval(
+                              child: Image.network(
+                                fullUserPhotoUrl,
+                                width: 38,
+                                height: 38,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) => Text(
+                                  firstLetter,
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: onSurfaceColor,
+                                  ),
+                                ),
+                              ),
+                            )
+                          : Text(
+                              firstLetter,
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: onSurfaceColor,
+                              ),
+                            ),
+                    ),
+                    title: Text(
+                      name + (isMe ? " (Sen)" : ""),
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14.5,
+                        color: onSurfaceColor,
+                      ),
+                    ),
+                    subtitle: Text(
+                      "@$username",
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppTheme.getSectionHeaderColor(isDark),
+                      ),
+                    ),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (isUserAdmin)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 3,
+                            ),
+                            margin: const EdgeInsets.only(right: 4),
+                            decoration: BoxDecoration(
+                              color: AppTheme.primaryNavy.withAlpha(30),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Text(
+                              "Yönetici",
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: AppTheme.primaryNavy,
+                              ),
+                            ),
+                          ),
+                        PopupMenuButton<String>(
+                          icon: Icon(
+                            Icons.more_vert_rounded,
+                            color: onSurfaceColor.withAlpha(140),
+                            size: 20,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          onSelected: (value) {
+                            if (value == "remove") {
+                              _showConfirmRemoveDialog(
+                                userId: userId,
+                                username: username,
+                                index: index,
+                              );
+                            } else if (value == "profile") {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => UserProfileDialog(user: p),
+                                ),
+                              );
+                            }
+                          },
+                          itemBuilder: (context) {
+                            final List<PopupMenuEntry<String>> menuItems = [];
+
+                            if (isAdmin && !isMe) {
+                              menuItems.add(
+                                const PopupMenuItem(
+                                  value: "remove",
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        Icons.person_remove_rounded,
+                                        color: AppTheme.errorColor,
+                                        size: 18,
+                                      ),
+                                      SizedBox(width: 8),
+                                      Text(
+                                        "Gruptan Çıkar",
+                                        style: TextStyle(
+                                          color: AppTheme.errorColor,
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            }
+
+                            menuItems.add(
+                              PopupMenuItem(
+                                value: "profile",
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      Icons.person_outline_rounded,
+                                      color: onSurfaceColor,
+                                      size: 18,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    const Text(
+                                      "Profili Gör",
+                                      style: TextStyle(fontSize: 13),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+
+                            return menuItems;
+                          },
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ),
+
+            const SizedBox(height: 20),
+
+            // 6. GRUPTAN AYRIL KARTI
+            _buildSectionHeader("Grup İşlemleri", isDark),
+            Container(
+              decoration: AppTheme.profileCardDecoration(isDark),
+              child: ListTile(
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 2,
+                ),
+                leading: Container(
+                  width: 38,
+                  height: 38,
+                  decoration: BoxDecoration(
+                    color: AppTheme.errorColor.withAlpha(isDark ? 25 : 15),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(
+                    Icons.exit_to_app_rounded,
+                    size: 19,
+                    color: AppTheme.errorColor,
+                  ),
                 ),
                 title: const Text(
                   "Gruptan Ayrıl",
                   style: TextStyle(
-                    color: Color.fromARGB(255, 155, 10, 10),
-                    fontWeight: FontWeight.bold,
+                    fontSize: 14.5,
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.errorColor,
                   ),
+                ),
+                trailing: const Icon(
+                  Icons.chevron_right_rounded,
+                  size: 20,
+                  color: AppTheme.errorColor,
                 ),
                 onTap: _showLeaveGroupDialog,
               ),
             ),
+
+            const SizedBox(height: 60),
           ],
         ),
       ),

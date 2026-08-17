@@ -4,13 +4,22 @@ import 'package:Lafla/services/api_client.dart';
 import 'package:Lafla/themes/tema1.dart';
 
 class MessageTile extends StatelessWidget {
-  static const double avatarSize = 56.0;          // Fotoğrafın genişlik ve yüksekliği (Kare)
-  static const double avatarRadius = 13.0;        // Fotoğrafın köşe yuvarlaklığı
-  static const double cardRadius = 17.0;          // Mesaj kutusunun köşe yuvarlaklığı
-  static const double cardVerticalMargin = 3.0;   // Kutuların alt alta olan dikey mesafesi
-  static const double cardHorizontalMargin = 16.0;// Kutunun ekran kenarlarına mesafesi
-  static const EdgeInsets cardPadding = EdgeInsets.fromLTRB(8, 8, 16, 8); // Kutu içi dolgu (Sol, Üst, Sağ, Alt)
-  static const double avatarTextSpacing = 16.0;   // Fotoğraf ile yazı arasındaki boşluk
+  static const double avatarSize =
+      56.0; // Fotoğrafın genişlik ve yüksekliği (Kare)
+  static const double avatarRadius = 13.0; // Fotoğrafın köşe yuvarlaklığı
+  static const double cardRadius = 17.0; // Mesaj kutusunun köşe yuvarlaklığı
+  static const double cardVerticalMargin =
+      3.0; // Kutuların alt alta olan dikey mesafesi
+  static const double cardHorizontalMargin =
+      16.0; // Kutunun ekran kenarlarına mesafesi
+  static const EdgeInsets cardPadding = EdgeInsets.fromLTRB(
+    8,
+    8,
+    16,
+    8,
+  ); // Kutu içi dolgu (Sol, Üst, Sağ, Alt)
+  static const double avatarTextSpacing =
+      16.0; // Fotoğraf ile yazı arasındaki boşluk
 
   final Map<String, dynamic> user;
   final VoidCallback onTap;
@@ -136,58 +145,45 @@ class MessageTile extends StatelessWidget {
 
                           const SizedBox(width: avatarTextSpacing),
 
-                          // Başlık ve Mesaj İçeriği
                           Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisAlignment: MainAxisAlignment.center,
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.center,
                               children: [
-                                Row(
-                                  children: [
-                                    // 🔹 Grup ise ismin başına eklenen küçük ikon
-                                    if (isGroup) ...[
-                                      Icon(
-                                        Icons.groups_rounded,
-                                        size: 16,
-                                        color: AppTheme.secondaryNavy,
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          if (isGroup) ...[
+                                            Icon(
+                                              Icons.groups_rounded,
+                                              size: 16,
+                                              color: AppTheme.secondaryNavy,
+                                            ),
+                                            const SizedBox(width: 5),
+                                          ],
+                                          Expanded(
+                                            child: Text(
+                                              name,
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: TextStyle(
+                                                fontSize: 16,
+                                                letterSpacing: -0.2,
+                                                fontWeight: unread > 0
+                                                    ? FontWeight.w700
+                                                    : FontWeight.w600,
+                                                color: onSurfaceColor,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
                                       ),
-                                      const SizedBox(width: 5),
-                                    ],
-                                    Expanded(
-                                      child: Text(
-                                        name,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: TextStyle(
-                                          fontSize: 16,
-                                          letterSpacing: -0.2,
-                                          fontWeight: unread > 0
-                                              ? FontWeight.w700
-                                              : FontWeight.w600,
-                                          color: onSurfaceColor,
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      user["time"] ?? "",
-                                      style: TextStyle(
-                                        fontSize: 11.5,
-                                        fontWeight: unread > 0
-                                            ? FontWeight.w700
-                                            : FontWeight.w400,
-                                        color: unread > 0
-                                            ? primaryColor
-                                            : onSurfaceColor.withAlpha(105),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 6),
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: Text(
+                                      const SizedBox(height: 6),
+                                      Text(
                                         user["message"] ?? "",
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
@@ -201,15 +197,48 @@ class MessageTile extends StatelessWidget {
                                               : onSurfaceColor.withAlpha(130),
                                         ),
                                       ),
-                                    ),
-                                    if (unread > 0) ...[
-                                      const SizedBox(width: 8),
-                                      _UnreadBadge(
-                                        count: unread,
-                                        color: primaryColor,
-                                      ),
                                     ],
-                                  ],
+                                  ),
+                                ),
+
+                                const SizedBox(width: 12),
+
+                                // SAAT + OKUNMAMIŞ ROZET
+                                SizedBox(
+                                  width: 38,
+                                  height: avatarSize,
+                                  child: Stack(
+                                    children: [
+                                      // SAAT — her zaman üstte
+                                      Positioned(
+                                        top: 2,
+                                        right: 0,
+                                        child: Text(
+                                          user["time"] ?? "",
+                                          style: TextStyle(
+                                            fontSize: 11.5,
+                                            fontWeight: unread > 0
+                                                ? FontWeight.w700
+                                                : FontWeight.w400,
+                                            color: unread > 0
+                                                ? primaryColor
+                                                : onSurfaceColor.withAlpha(105),
+                                          ),
+                                        ),
+                                      ),
+
+                                      // ROZET — saatten bağımsız, dikey ortada
+                                      if (unread > 0)
+                                        Positioned(
+                                          right: 0,
+                                          top: (avatarSize - 20) / 2,
+                                          child: _UnreadBadge(
+                                            count: unread,
+                                            color: primaryColor,
+                                          ),
+                                        ),
+                                    ],
+                                  ),
                                 ),
                               ],
                             ),
@@ -264,13 +293,12 @@ class _Avatar extends StatelessWidget {
         ),
         child: Container(
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(highlighted ? radius - 2 : radius),
+            borderRadius: BorderRadius.circular(
+              highlighted ? radius - 2 : radius,
+            ),
             gradient: photoUrl == null
                 ? const LinearGradient(
-                    colors: [
-                      AppTheme.primaryNavy,
-                      AppTheme.secondaryNavy,
-                    ],
+                    colors: [AppTheme.primaryNavy, AppTheme.secondaryNavy],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   )
@@ -286,7 +314,9 @@ class _Avatar extends StatelessWidget {
           alignment: Alignment.center,
           child: photoUrl != null
               ? ClipRRect(
-                  borderRadius: BorderRadius.circular(highlighted ? radius - 2 : radius),
+                  borderRadius: BorderRadius.circular(
+                    highlighted ? radius - 2 : radius,
+                  ),
                   child: Image.network(
                     photoUrl!,
                     width: double.infinity,
